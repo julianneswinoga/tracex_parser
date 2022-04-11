@@ -2,6 +2,7 @@
 
 import struct
 import argparse
+import copy
 from typing import *
 
 
@@ -97,6 +98,7 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
     if object_registry_addr_range % object_entry.total_size() != 0:
         raise Exception(f'Object registry range does not match object size: {object_registry_addr_range}, {object_entry.total_size()}')
     num_objects = object_registry_addr_range // object_entry.total_size()
+
     object_entry_start_idx = start_idx
     object_registry = []
     for obj_idx in range(num_objects):
@@ -105,15 +107,44 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
         object_entry.unpack(buf[object_entry_start_idx:object_entry_end_idx])
         # trim trailing NULs
         object_entry['thread_registry_entry_object_name'] = object_entry['thread_registry_entry_object_name'].strip(b'\0')
-        object_registry.append(object_entry)
+        object_registry.append(copy.deepcopy(object_entry))
         object_entry_start_idx += object_entry.total_size()
     return object_registry, object_entry_start_idx
+
+
+def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
+    event_entry = CStruct(endian_str, [
+        ('L', 'thread_pointer'),
+        ('L', 'thread_priority'),
+        ('L', 'event_id'),
+        ('L', 'time_stamp'),
+        ('L', 'information_field_1'),
+        ('L', 'information_field_2'),
+        ('L', 'information_field_3'),
+        ('L', 'information_field_4'),
+    ])
+    event_entry_addr_range = (control_header['buffer_end_pointer'] - control_header['buffer_start_pointer'])
+    if event_entry_addr_range % event_entry.total_size() != 0:
+        raise Exception(f'Event entries range does not match event size: {event_entry_addr_range}, {event_entry.total_size()}')
+    num_entries = event_entry_addr_range // event_entry.total_size()
+
+    event_entry_start_idx = start_idx
+    event_entries = []
+    for event_idx in range(num_entries):
+        event_entry.clear()
+        object_entry_end_idx = event_entry_start_idx + event_entry.total_size()
+        event_entry.unpack(buf[event_entry_start_idx:object_entry_end_idx])
+        if event_entry['event_id'] != 0:
+            event_entries.append(copy.deepcopy(event_entry))
+        event_entry_start_idx += event_entry.total_size()
+    event_entries.sort(key=lambda t: t['time_stamp'])
+    return event_entries, event_entry_start_idx
 
 
 def parse_tracex_buffer(filepath: str) -> Optional:
     print(f'Parsing {filepath}')
 
-    # format is control header, object registry entries, trace entries
+    # format is control header, object registry entries, trace/event entries
     with open(filepath, 'rb') as fp:
         tracex_buf = fp.read()
 
@@ -125,8 +156,11 @@ def parse_tracex_buffer(filepath: str) -> Optional:
     print(control_header)
 
     # Unpack object entries
-    object_registry = get_object_registry(endian_str, tracex_buf, control_header_end_idx, control_header)
-    print(object_registry)
+    object_registry, object_registry_end_idx = get_object_registry(endian_str, tracex_buf, control_header_end_idx, control_header)
+
+    # Unpack trace/event entries
+    event_entries, _ = get_event_entries(endian_str, tracex_buf, object_registry_end_idx, control_header)
+    print('\n'.join(str(t) for t in event_entries))
 
 
 def main():
