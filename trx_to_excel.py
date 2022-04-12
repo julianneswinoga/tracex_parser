@@ -8,7 +8,7 @@ from colorhash import ColorHash
 from colour import Color
 
 from parser import parse_tracex_buffer
-from events import CommonArgsMap, SemGetEvent, SemPutEvent
+from events import *
 
 parser = argparse.ArgumentParser(description="""aaaaa""")
 parser.add_argument('input_csvs', nargs='+', action='store',
@@ -31,178 +31,65 @@ timeout_map = {
 remap_rtn_type = List[Union[str, Dict]]
 
 
-# see tx_trace.h
-class EventRemaps:
-    @staticmethod
-    def _extra_args(**kwargs) -> str:
-        return ' <' + ','.join([f'{n}={hex(a)}' for n, a in kwargs.items()]) + '>'
-
-    @staticmethod
-    def isrEnter(fn_name, arg_list) -> remap_rtn_type:
-        stack_ptr, isr_num, sys_state, preempt_dis = arg_list
-        isr_format = {'font_color': ColorHash(isr_num).hex}
-        extra_args = EventRemaps._extra_args(stack_ptr=stack_ptr, sys_state=sys_state, preempt_dis=preempt_dis)
-        return ['isrEnter(', isr_format, f'{isr_num})', extra_args]
-
-    @staticmethod
-    def isrExit(fn_name, arg_list) -> remap_rtn_type:
-        stack_ptr, isr_num, sys_state, preempt_dis = arg_list
-        isr_format = {'font_color': ColorHash(isr_num).hex}
-        extra_args = EventRemaps._extra_args(stack_ptr=stack_ptr, sys_state=sys_state, preempt_dis=preempt_dis)
-        return ['isrExit(', isr_format, f'{isr_num})', extra_args]
-
-    @staticmethod
-    def semGet(fn_name, arg_list) -> remap_rtn_type:
-        sem_id, timeout, cur_cnt, stack_ptr = arg_list
-        if sem_id in sem_ptr_map:
-            sem_id = sem_ptr_map[sem_id]
-        sem_format = {'font_color': ColorHash(sem_id).hex}
-        if timeout in timeout_map:
-            timeout = timeout_map[timeout]
-        extra_args = EventRemaps._extra_args(cur_cnt=cur_cnt, stack_ptr=stack_ptr)
-        return ['semGet(', sem_format, f'{sem_id}', f', {timeout})', extra_args]
-
-    @staticmethod
-    def semPut(fn_name, arg_list) -> remap_rtn_type:
-        sem_id, cur_cnt, suspend_cnt, ceiling = arg_list
-        if sem_id in sem_ptr_map:
-            sem_id = sem_ptr_map[sem_id]
-        sem_format = {'font_color': ColorHash(sem_id).hex}
-
-        extra_args = EventRemaps._extra_args(cur_cnt=cur_cnt, suspend_cnt=suspend_cnt)
-        if ceiling == 1:
-            return ['semBPut(', sem_format, f'{sem_id}', f')', extra_args]
-        else:
-            return ['semCeilingPut(', sem_format, f'{sem_id}', f', {ceiling})', extra_args]
-
-    @staticmethod
-    def mtxGet(fn_name, arg_list) -> remap_rtn_type:
-        mtx_id, timeout, arg3, arg4 = arg_list
-        if mtx_id in mtx_ptr_map:
-            mtx_id = mtx_ptr_map[mtx_id]
-        else:
-            mtx_id = hex(mtx_id)
-        mtx_format = {'font_color': ColorHash(mtx_id).hex}
-        if timeout in timeout_map:
-            timeout = timeout_map[timeout]
-        extra_args = EventRemaps._extra_args(arg3=arg3, arg4=arg4)
-        return ['mtxGet(', mtx_format, f'{mtx_id}', f', {timeout})', extra_args]
-
-    @staticmethod
-    def mtxPut(fn_name, arg_list) -> remap_rtn_type:
-        mtx_id, owning_thread, ownCnt, stack_ptr = arg_list
-        if mtx_id in mtx_ptr_map:
-            mtx_id = mtx_ptr_map[mtx_id]
-        else:
-            mtx_id = hex(mtx_id)
-        mtx_format = {'font_color': ColorHash(mtx_id).hex}
-
-        return ['mtxPut(', mtx_format, f'{mtx_id}', f', owning_thread={owning_thread} have={ownCnt})']
-
-    @staticmethod
-    def threadIdentify(fn_name, arg_list) -> remap_rtn_type:
-        # No args
-        return ['threadIdentify()']
-
-    @staticmethod
-    def threadPreemptionChange(fn_name, arg_list) -> remap_rtn_type:
-        next_ctx, new_thresh, old_thresh, thread_state = arg_list
-        extra_args = EventRemaps._extra_args(next_ctx=next_ctx, thread_state=thread_state)
-        return [f'preemptionChange({old_thresh} -> {new_thresh})', extra_args]
-
-    @staticmethod
-    def timeSlice(fn_name, arg_list) -> remap_rtn_type:
-        nxt_thread, sys_state, preempt_disable, stack = arg_list
-        extra_args = EventRemaps._extra_args(nxt_thread=nxt_thread, sys_state=sys_state, preempt_disable=preempt_disable, stack=stack)
-        return ['timeSlice()', extra_args]
-
-    @staticmethod
-    def timeGet(fn_name, arg_list) -> remap_rtn_type:
-        cur_ticks, next_ctx, arg3, arg4 = arg_list
-        return [f'tick() -> {cur_ticks}ticks']
-
-    @staticmethod
-    def uartOpen(fn_name, arg_list) -> remap_rtn_type:
-        line_number, arg2, arg3, arg4 = arg_list
-        return [{'bold': True}, f'uartOpen()']
-
-    @staticmethod
-    def uartClose(fn_name, arg_list) -> remap_rtn_type:
-        line_number, fd, arg3, arg4 = arg_list
-        fd_format = {'font_color': ColorHash(fd).hex}
-        return [{'bold': True}, 'uartClose(', fd_format, f'fd={fd})']
-
-    @staticmethod
-    def uartRead(fn_name, arg_list) -> remap_rtn_type:
-        fd, count, vmin, vtime = arg_list
-        fd_format = {'font_color': ColorHash(fd).hex}
-        return [{'bold': True}, 'uartRead(', fd_format, f'fd={fd},', f'count={count},', f'vmin={vmin},',
-                f'vtime={vtime})']
-
-    @staticmethod
-    def uartReadBufferBlockingPl(fn_name, arg_list) -> remap_rtn_type:
-        xferlen, timeout, arg3, arg4 = arg_list
-        if timeout in timeout_map:
-            timeout = timeout_map[timeout]
-        return [{'bold': True}, 'uartReadBufferBlockingPl(', f'xferlen={xferlen},', f'timeout={timeout})']
-
-    @staticmethod
-    def uartWaitForReceiveToCompleteWithBuffer(fn_name, arg_list) -> remap_rtn_type:
-        bytesReq, timeout, arg3, arg4 = arg_list
-        if timeout in timeout_map:
-            timeout = timeout_map[timeout]
-        return [{'bold': True}, 'uartWaitForReceiveToCompleteWithBuffer(', f'bytesReq={bytesReq},',
-                f'timeout={timeout})']
-
-    @staticmethod
-    def uartWaitForReceiveToCompleteWithBufferReturnEarly(fn_name, arg_list) -> remap_rtn_type:
-        return [{'bold': True}, f'uartWaitForReceiveToCompleteWithBufferReturnEarly()']
-
-    @staticmethod
-    def uartWaitForReceiveToCompleteWithBufferReturnLate(fn_name, arg_list) -> remap_rtn_type:
-        return [{'bold': True}, f'uartWaitForReceiveToCompleteWithBufferReturnLate()']
-
-    @staticmethod
-    def uartReadMinimumBytesBlocking(fn_name, arg_list) -> remap_rtn_type:
-        xferlen, vmin, vtime, arg4 = arg_list
-        if vtime in timeout_map:
-            vtime = timeout_map[vtime]
-        return [{'bold': True}, 'uartReadMinimumBytesBlocking(', f'xferlen={xferlen},', f'vmin={vmin},',
-                f'vtime={vtime})']
-
-    @staticmethod
-    def uartISRError(fn_name, arg_list) -> remap_rtn_type:
-        notifyLevel, cond1, cond2, arg4 = arg_list
-        return [{'bold': True}, 'uartISRError(', f'notifyLevel={notifyLevel},', f'bufferLargerThanNotifyLevel={cond1},',
-                f'userRxPtrsNotNull={cond2})']
-
-    @staticmethod
-    def uartSetRxFifoTriggerLevelPl(fn_name, arg_list) -> remap_rtn_type:
-        triglevel, arg2, arg3, arg4 = arg_list
-        return [{'bold': True}, 'uartSetRxFifoTriggerLevelPl(', f'triglevel={triglevel})']
+class uartOpen(TraceXEvent):
+    fn_name = 'uartOpen'
+    arg_map = ['line_num', '_2', '_3', '_4']
 
 
-type_to_fn_map: Dict[int, Callable[[str, List], remap_rtn_type]] = {
-    3: EventRemaps.isrEnter,
-    4: EventRemaps.isrExit,
-    5: EventRemaps.timeSlice,
-    52: EventRemaps.mtxGet,
-    57: EventRemaps.mtxPut,
-    80: EventRemaps.semPut,
-    83: EventRemaps.semGet,
-    103: EventRemaps.threadIdentify,
-    107: EventRemaps.threadPreemptionChange,
-    120: EventRemaps.timeGet,
-    5000: EventRemaps.uartOpen,
-    5001: EventRemaps.uartClose,
-    5002: EventRemaps.uartRead,
-    5003: EventRemaps.uartReadBufferBlockingPl,
-    5004: EventRemaps.uartWaitForReceiveToCompleteWithBuffer,
-    5005: EventRemaps.uartWaitForReceiveToCompleteWithBufferReturnEarly,
-    5006: EventRemaps.uartWaitForReceiveToCompleteWithBufferReturnLate,
-    5007: EventRemaps.uartReadMinimumBytesBlocking,
-    5008: EventRemaps.uartISRError,
-    5009: EventRemaps.uartSetRxFifoTriggerLevelPl,
+class uartClose(TraceXEvent):
+    fn_name = 'uartClose'
+    arg_map = ['line_num', CommonArgsMap.obj_id, '_3', '_4']
+
+
+class uartRead(TraceXEvent):
+    fn_name = 'uartRead'
+    arg_map = [CommonArgsMap.obj_id, 'count', 'vmin', 'vtime']
+
+
+class uartReadBufferBlockingPl(TraceXEvent):
+    fn_name = 'uartReadBufferBlockingPl'
+    arg_map = ['xferlen', CommonArgsMap.timeout, '_3', '_4']
+
+
+class uartWaitForReceiveToCompleteWithBuffer(TraceXEvent):
+    fn_name = 'uartWaitForReceiveToCompleteWithBuffer'
+    arg_map = ['bytesReq', CommonArgsMap.timeout, '_3', '_4']
+
+
+class uartWaitForReceiveToCompleteWithBufferReturnEarly(TraceXEvent):
+    fn_name = 'uartWaitForReceiveToCompleteWithBufferReturnEarly'
+
+
+class uartWaitForReceiveToCompleteWithBufferReturnLate(TraceXEvent):
+    fn_name = 'uartWaitForReceiveToCompleteWithBufferReturnLate'
+
+
+class uartReadMinimumBytesBlocking(TraceXEvent):
+    fn_name = 'uartReadMinimumBytesBlocking'
+    arg_map = ['xferlen', 'vmin', 'vtime', '_4']
+
+
+class uartISRError(TraceXEvent):
+    fn_name = 'uartISRError'
+    arg_map = ['notifyLevel', 'cond1', 'cond2', '_4']
+
+
+class uartSetRxFifoTriggerLevelPl(TraceXEvent):
+    fn_name = 'uartSetRxFifoTriggerLevelPl'
+    arg_map = ['triglevel', '_3', '_4', '_4']
+
+
+custom_events_map = {
+    5000: uartOpen,
+    5001: uartClose,
+    5002: uartRead,
+    5003: uartReadBufferBlockingPl,
+    5004: uartWaitForReceiveToCompleteWithBuffer,
+    5005: uartWaitForReceiveToCompleteWithBufferReturnEarly,
+    5006: uartWaitForReceiveToCompleteWithBufferReturnLate,
+    5007: uartReadMinimumBytesBlocking,
+    5008: uartISRError,
+    5009: uartSetRxFifoTriggerLevelPl,
 }
 
 
@@ -213,17 +100,24 @@ meta_row_type = List[Union[int, str, Union[str, rich_event_cell], Dict]]
 
 
 def convert_file(filepath: str) -> List[converted_row_type]:
-    events = parse_tracex_buffer(filepath)
+    events = parse_tracex_buffer(filepath, custom_events_map)
 
     out_lines = [['time', 'actor', 'event']]  # header
     for event in events:
         thread_str = event.thread_name if event.thread_name is not None else event.thread_ptr
         thread_format = {'font_color': ColorHash(thread_str).hex}
 
-        fn_str = event.function_name if event.function_name is not None else event.id
+        fn_str = str(event.id if event.fn_name is None else event.fn_name)
+        if event.id > 4096:
+            fn = [{'bold': True}, fn_str, '(']
+        else:
+            fn = [fn_str, '(']
+
         if isinstance(event.args, list):
-            # No processing was done
-            arg_list = [', '.join(f'{num}={hex(arg)}' for num, arg in enumerate(event.args))]
+            if event.arg_map is None:
+                arg_list = [','.join(f'{arg_num}={hex(arg_val)}' for arg_num, arg_val in enumerate(event.args))]
+            else:
+                arg_list = [','.join(f'{arg_name}={hex(arg_val)}' for arg_name, arg_val in zip(event.arg_map, event.args))]
         else:
             arg_list = []
             for arg_name, arg_val in event.mapped_args.items():
@@ -235,7 +129,7 @@ def convert_file(filepath: str) -> List[converted_row_type]:
                     arg_list.append(arg_format)
                 arg_list.append(f'{arg_name}={arg_val},')
 
-        event_str = [f'{fn_str}('] + arg_list + [')']
+        event_str = fn + arg_list + [')']
         out_lines.append([event.timestamp, [thread_format, thread_str], event_str])
     return out_lines
 
@@ -248,23 +142,23 @@ class MetaMatches:
     def critical_section(lines, i) -> meta_match_type:
         if i + 5 > len(lines) - 1:
             return None
-        semget = SemGetEvent.function_name in str(lines[i + 0][2]) and 'txBufferLock' in str(lines[i + 0][2])
-        tid1 = 'threadIdentify' in str(lines[i + 1][2])
-        preempt1 = 'preemptionChange' in str(lines[i + 2][2])
-        tid2 = 'threadIdentify' in str(lines[i + 3][2])
-        preempt2 = 'preemptionChange' in str(lines[i + 4][2])
-        semput = SemPutEvent.function_name in str(lines[i + 5][2]) and 'txBufferLock' in str(lines[i + 5][2])
+        semget = SemGetEvent.fn_name in str(lines[i + 0][2]) and 'txBufferLock' in str(lines[i + 0][2])
+        tid1 = ThreadIdEvent.fn_name in str(lines[i + 1][2])
+        preempt1 = ThreadPreemptionChangeEvent.fn_name in str(lines[i + 2][2])
+        tid2 = ThreadIdEvent.fn_name in str(lines[i + 3][2])
+        preempt2 = ThreadPreemptionChangeEvent.fn_name in str(lines[i + 4][2])
+        semput = SemPutEvent.fn_name in str(lines[i + 5][2]) and 'txBufferLock' in str(lines[i + 5][2])
         if semget and tid1 and preempt1 and tid2 and preempt2 and semput:
             return 'green', i, i + 5
         return None
 
     @staticmethod
     def rx_transfer(lines, i) -> meta_match_type:
-        semget = SemGetEvent.function_name in str(lines[i + 0][2]) and 'rxTransferLock' in str(lines[i + 0][2])
+        semget = SemGetEvent.fn_name in str(lines[i + 0][2]) and 'rxTransferLock' in str(lines[i + 0][2])
         if not semget:
             return None
         for offset in range(len(lines) - i):
-            semput = SemPutEvent.function_name in str(lines[i + offset][2]) and 'rxTransferLock' in str(lines[i + offset][2])
+            semput = SemPutEvent.fn_name in str(lines[i + offset][2]) and 'rxTransferLock' in str(lines[i + offset][2])
             if semput:
                 return 'yellow', i, i + offset
         return None
@@ -272,23 +166,23 @@ class MetaMatches:
     @staticmethod
     def mutex_locks(lines, i) -> meta_match_type:
         # we can always assume that mutexes are used for locking
-        mtxget = 'mtxGet' in str(lines[i + 0][2])
+        mtxget = MtxGetEvent.fn_name in str(lines[i + 0][2])
         if not mtxget:
             return None
-        mtxName = lines[i + 0][2][2]  # First parameter of the function
+        mtxName = lines[i + 0][2][2].split(CommonArgsMap.obj_id, maxsplit=1)[1].split(',', maxsplit=1)[0]
         for offset in range(len(lines) - i):
-            mtxPut = 'mtxPut' in str(lines[i + offset][2]) and mtxName in str(lines[i + offset][2])
+            mtxPut = MtxPutEvent.fn_name in str(lines[i + offset][2]) and mtxName in str(lines[i + offset][2])
             if mtxPut:
                 return 'purple', i, i + offset
         return None
 
     @staticmethod
     def rx_completed(lines, i) -> meta_match_type:
-        semput = SemPutEvent.function_name in str(lines[i + 0][2]) and 'blockingRxCompleted' in str(lines[i + 0][2])
+        semput = SemPutEvent.fn_name in str(lines[i + 0][2]) and 'blockingRxCompleted' in str(lines[i + 0][2])
         if not semput:
             return None
         for offset in range(len(lines) - i):
-            semget = SemGetEvent.function_name in str(lines[i + offset][2]) and 'blockingRxCompleted' in str(lines[i + offset][2])
+            semget = SemGetEvent.fn_name in str(lines[i + offset][2]) and 'blockingRxCompleted' in str(lines[i + offset][2])
             if semget:
                 return 'red', i, i + offset
         return None

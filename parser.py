@@ -5,7 +5,7 @@ import argparse
 import copy
 from typing import *
 
-from events import TraceXEvent, convert_event
+from events import TraceXEvent, convert_events
 
 
 parser = argparse.ArgumentParser(description="""aaaaa""")
@@ -152,16 +152,7 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
     return event_entries, event_entry_start_idx
 
 
-def convert_events(raw_events: List[CStruct], object_registry: List[CStruct]) -> List[TraceXEvent]:
-    x_events = []
-    for raw_event in raw_events:
-        x_event = convert_event(raw_event)
-        x_event.apply_object_registry(object_registry)
-        x_events.append(x_event)
-    return x_events
-
-
-def parse_tracex_buffer(filepath: str) -> List[TraceXEvent]:
+def parse_tracex_buffer(filepath: str, custom_events_map: Dict[int, TraceXEvent]) -> List[TraceXEvent]:
     print(f'Parsing {filepath}')
 
     # format is control header, object registry entries, trace/event entries
@@ -183,7 +174,7 @@ def parse_tracex_buffer(filepath: str) -> List[TraceXEvent]:
     event_entries, _ = get_event_entries(endian_str, tracex_buf, object_registry_end_idx, control_header)
     # print('\n'.join(str(t) for t in event_entries[:50]))
 
-    tracex_events = convert_events(event_entries, object_registry)
+    tracex_events = convert_events(event_entries, object_registry, custom_events_map)
     # print('\n'.join(str(t) for t in tracex_events[len(tracex_events) - 50:]))
     return tracex_events
 
