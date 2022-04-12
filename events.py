@@ -30,7 +30,7 @@ class TraceXEvent:
         else:
             for obj in object_registry:
                 if self.thread_ptr == obj['thread_registry_entry_object_pointer']:
-                    self.thread_name = obj['thread_registry_entry_object_name']
+                    self.thread_name = str(obj['thread_registry_entry_object_name'])
 
 
 class SemGetEvent(TraceXEvent):
@@ -43,7 +43,16 @@ class SemGetEvent(TraceXEvent):
 
 def convert_event(raw_event) -> TraceXEvent:
     id_map = {
+        # 3: EventRemaps.isrEnter,
+        # 4: EventRemaps.isrExit,
+        # 5: EventRemaps.timeSlice,
+        # 52: EventRemaps.mtxGet,
+        # 57: EventRemaps.mtxPut,
+        # 80: EventRemaps.semPut,
         83: SemGetEvent,
+        # 103: EventRemaps.threadIdentify,
+        # 107: EventRemaps.threadPreemptionChange,
+        # 120: EventRemaps.timeGet,
     }
     event_id = raw_event['event_id']
     raw_event_args = [raw_event['information_field_1'], raw_event['information_field_2'],

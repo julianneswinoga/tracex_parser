@@ -66,7 +66,7 @@ def get_endian_str(buf: bytes) -> Tuple[str, int]:
     elif header_id == magic_file_number_little:
         return '<', magic_str_size
     else:
-        raise Exception(f'Invalid magic number: {header_id}')
+        raise Exception(f'Invalid magic number: {hex(header_id)}')
 
 
 def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CStruct, int]:
@@ -161,7 +161,7 @@ def convert_events(raw_events: List[CStruct], object_registry: List[CStruct]) ->
     return x_events
 
 
-def parse_tracex_buffer(filepath: str) -> Optional:
+def parse_tracex_buffer(filepath: str) -> List[TraceXEvent]:
     print(f'Parsing {filepath}')
 
     # format is control header, object registry entries, trace/event entries
@@ -172,19 +172,20 @@ def parse_tracex_buffer(filepath: str) -> Optional:
     endian_str, header_id_end_idx = get_endian_str(tracex_buf)
     # Unpack the rest of the control header
     control_header, control_header_end_idx = get_control_header(endian_str, tracex_buf, header_id_end_idx)
-    print(control_header)
+    # print(control_header)
 
     # Unpack object entries
     object_registry, object_registry_end_idx = get_object_registry(endian_str, tracex_buf, control_header_end_idx, control_header)
-    print('\n'.join(str(t) for t in object_registry))
-    print(hex(object_registry_end_idx - control_header_end_idx))
+    # print('\n'.join(str(t) for t in object_registry))
+    # print(hex(object_registry_end_idx - control_header_end_idx))
 
     # Unpack trace/event entries
     event_entries, _ = get_event_entries(endian_str, tracex_buf, object_registry_end_idx, control_header)
     # print('\n'.join(str(t) for t in event_entries[:50]))
 
     tracex_events = convert_events(event_entries, object_registry)
-    print('\n'.join(str(t) for t in tracex_events[len(tracex_events) - 50:]))
+    # print('\n'.join(str(t) for t in tracex_events[len(tracex_events) - 50:]))
+    return tracex_events
 
 
 def main():
