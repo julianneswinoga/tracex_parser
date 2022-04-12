@@ -5,6 +5,8 @@ import argparse
 import copy
 from typing import *
 
+from events import TraceXEvent, convert_event
+
 
 parser = argparse.ArgumentParser(description="""aaaaa""")
 parser.add_argument('input_trxs', nargs='+', action='store',
@@ -18,7 +20,10 @@ class CStruct:
         self.fields = fields
 
     def __repr__(self):
-        return str(self.data)
+        return str({k: hex(v) if isinstance(v, int) else v
+                    for k, v in self.data.items()
+                    if 'reserved' not in k
+                    })
 
     def __getitem__(self, key):
         return self.data[key]
@@ -147,6 +152,15 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
     return event_entries, event_entry_start_idx
 
 
+def convert_events(raw_events: List[CStruct], object_registry: List[CStruct]) -> List[TraceXEvent]:
+    x_events = []
+    for raw_event in raw_events:
+        x_event = convert_event(raw_event)
+        x_event.apply_object_registry(object_registry)
+        x_events.append(x_event)
+    return x_events
+
+
 def parse_tracex_buffer(filepath: str) -> Optional:
     print(f'Parsing {filepath}')
 
@@ -162,10 +176,15 @@ def parse_tracex_buffer(filepath: str) -> Optional:
 
     # Unpack object entries
     object_registry, object_registry_end_idx = get_object_registry(endian_str, tracex_buf, control_header_end_idx, control_header)
+    print('\n'.join(str(t) for t in object_registry))
+    print(hex(object_registry_end_idx - control_header_end_idx))
 
     # Unpack trace/event entries
     event_entries, _ = get_event_entries(endian_str, tracex_buf, object_registry_end_idx, control_header)
-    print('\n'.join(str(t) for t in event_entries))
+    # print('\n'.join(str(t) for t in event_entries[:50]))
+
+    tracex_events = convert_events(event_entries, object_registry)
+    print('\n'.join(str(t) for t in tracex_events[len(tracex_events) - 50:]))
 
 
 def main():
