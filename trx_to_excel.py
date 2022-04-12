@@ -8,6 +8,7 @@ from colorhash import ColorHash
 from colour import Color
 
 from parser import parse_tracex_buffer
+from events import CommonArgsMap, SemGetEvent, SemPutEvent
 
 parser = argparse.ArgumentParser(description="""aaaaa""")
 parser.add_argument('input_csvs', nargs='+', action='store',
@@ -217,14 +218,25 @@ def convert_file(filepath: str) -> List[converted_row_type]:
     out_lines = [['time', 'actor', 'event']]  # header
     for event in events:
         thread_str = event.thread_name if event.thread_name is not None else event.thread_ptr
+        thread_format = {'font_color': ColorHash(thread_str).hex}
+
         fn_str = event.function_name if event.function_name is not None else event.id
         if isinstance(event.args, list):
             # No processing was done
-            arg_str = ', '.join(f'{num}={hex(arg)}' for num, arg in enumerate(event.args))
+            arg_list = [', '.join(f'{num}={hex(arg)}' for num, arg in enumerate(event.args))]
         else:
-            arg_str = event.args
-        event_str = f'{fn_str}({arg_str})'
-        out_lines.append([event.timestamp, thread_str, event_str])
+            arg_list = []
+            for arg_name, arg_val in event.mapped_args.items():
+                if arg_name == CommonArgsMap.obj_id and arg_val in sem_ptr_map:
+                    arg_val = sem_ptr_map[arg_val]
+
+                if arg_name in [CommonArgsMap.obj_id]:
+                    arg_format = {'font_color': ColorHash(arg_name).hex}
+                    arg_list.append(arg_format)
+                arg_list.append(f'{arg_name}={arg_val},')
+
+        event_str = [f'{fn_str}('] + arg_list + [')']
+        out_lines.append([event.timestamp, [thread_format, thread_str], event_str])
     return out_lines
 
 
@@ -236,23 +248,23 @@ class MetaMatches:
     def critical_section(lines, i) -> meta_match_type:
         if i + 5 > len(lines) - 1:
             return None
-        semget = 'semGet' in str(lines[i + 0][2]) and 'txBufferLock' in str(lines[i + 0][2])
+        semget = SemGetEvent.function_name in str(lines[i + 0][2]) and 'txBufferLock' in str(lines[i + 0][2])
         tid1 = 'threadIdentify' in str(lines[i + 1][2])
         preempt1 = 'preemptionChange' in str(lines[i + 2][2])
         tid2 = 'threadIdentify' in str(lines[i + 3][2])
         preempt2 = 'preemptionChange' in str(lines[i + 4][2])
-        semput = 'semBPut' in str(lines[i + 5][2]) and 'txBufferLock' in str(lines[i + 5][2])
+        semput = SemPutEvent.function_name in str(lines[i + 5][2]) and 'txBufferLock' in str(lines[i + 5][2])
         if semget and tid1 and preempt1 and tid2 and preempt2 and semput:
             return 'green', i, i + 5
         return None
 
     @staticmethod
     def rx_transfer(lines, i) -> meta_match_type:
-        semget = 'semGet' in str(lines[i + 0][2]) and 'rxTransferLock' in str(lines[i + 0][2])
+        semget = SemGetEvent.function_name in str(lines[i + 0][2]) and 'rxTransferLock' in str(lines[i + 0][2])
         if not semget:
             return None
         for offset in range(len(lines) - i):
-            semput = 'semBPut' in str(lines[i + offset][2]) and 'rxTransferLock' in str(lines[i + offset][2])
+            semput = SemPutEvent.function_name in str(lines[i + offset][2]) and 'rxTransferLock' in str(lines[i + offset][2])
             if semput:
                 return 'yellow', i, i + offset
         return None
@@ -272,11 +284,11 @@ class MetaMatches:
 
     @staticmethod
     def rx_completed(lines, i) -> meta_match_type:
-        semput = 'semBPut' in str(lines[i + 0][2]) and 'blockingRxCompleted' in str(lines[i + 0][2])
+        semput = SemPutEvent.function_name in str(lines[i + 0][2]) and 'blockingRxCompleted' in str(lines[i + 0][2])
         if not semput:
             return None
         for offset in range(len(lines) - i):
-            semget = 'semGet' in str(lines[i + offset][2]) and 'blockingRxCompleted' in str(lines[i + offset][2])
+            semget = SemGetEvent.function_name in str(lines[i + offset][2]) and 'blockingRxCompleted' in str(lines[i + offset][2])
             if semget:
                 return 'red', i, i + offset
         return None
@@ -330,7 +342,7 @@ def write_rich_event_cell(workbook, worksheet, row, col, rich_cell: remap_rtn_ty
     if rich:
         if len(new_field_parts) <= 2:
             # write_rich_string doesn't like it when you lead with a format for whatever reason
-            new_field_parts.insert(0, '_')
+            new_field_parts.insert(0, ' ')
         worksheet.write_rich_string(row, col, *new_field_parts)
     else:
         # Normal string, no rich parts
@@ -361,7 +373,6 @@ def main():
         converted_lines = convert_file(input_filepath)
         metadata_lines = add_trace_metadata(converted_lines)
         if '.' in input_filepath:
-            print(input_filepath.rsplit('.', maxsplit=1))
             output_file = input_filepath.rsplit('.', maxsplit=1)[0] + '_converted.xlsx'
         else:
             output_file = input_filepath + '_converted.xlsx'

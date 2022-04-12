@@ -1,6 +1,12 @@
 from typing import *
 
 
+class CommonArgsMap:
+    obj_id = 'obj_id'
+    stack_ptr = 'stack_ptr'
+    thread_ptr = 'thread_ptr'
+
+
 class TraceXEvent:
     def __init__(self, thread_ptr: int, thread_priority: int, event_id: int, timestamp: int, fn_args: List[int]):
         self.thread_ptr = thread_ptr
@@ -23,6 +29,9 @@ class TraceXEvent:
             arg_str = self.args
         return f'{self.timestamp}:{thread_str} {fn_str}({arg_str})'
 
+    def _generate_arg_dict(self, arg_names: List[str]) -> Dict[str, Any]:
+        return {k: v for k, v in zip(arg_names, self.args)}
+
     def apply_object_registry(self, object_registry: List):
         # This can be done for all objects
         if self.thread_ptr == 0xFFFFFFFF:
@@ -30,15 +39,27 @@ class TraceXEvent:
         else:
             for obj in object_registry:
                 if self.thread_ptr == obj['thread_registry_entry_object_pointer']:
-                    self.thread_name = str(obj['thread_registry_entry_object_name'])
+                    self.thread_name = obj['thread_registry_entry_object_name'].decode('ASCII')
+
+
+class SemPutEvent(TraceXEvent):
+    function_name = 'semPut'
+
+    def apply_object_registry(self, object_registry: List):
+        super().apply_object_registry(object_registry)
+        self.function_name = SemPutEvent.function_name
+        self.mapped_args = self._generate_arg_dict([CommonArgsMap.obj_id, 'timeout', 'cur_cnt', 'stack_ptr'])
+        self.args = f"sem_id={hex(self.mapped_args[CommonArgsMap.obj_id])}, stack_ptr={hex(self.mapped_args['stack_ptr'])}"
 
 
 class SemGetEvent(TraceXEvent):
+    function_name = 'semGet'
+
     def apply_object_registry(self, object_registry: List):
         super().apply_object_registry(object_registry)
-        self.function_name = 'semGet'
-        self.mapped_args = {k: v for k, v in zip(['sem_id', 'timeout', 'cur_cnt', 'stack_ptr'], self.args)}
-        self.args = f"sem_id={hex(self.mapped_args['sem_id'])}, stack_ptr={hex(self.mapped_args['stack_ptr'])}"
+        self.function_name = SemGetEvent.function_name
+        self.mapped_args = self._generate_arg_dict([CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling'])
+        self.args = f"sem_id={hex(self.mapped_args[CommonArgsMap.obj_id])}, cur_cnt={hex(self.mapped_args['cur_cnt'])}"
 
 
 def convert_event(raw_event) -> TraceXEvent:
@@ -48,7 +69,7 @@ def convert_event(raw_event) -> TraceXEvent:
         # 5: EventRemaps.timeSlice,
         # 52: EventRemaps.mtxGet,
         # 57: EventRemaps.mtxPut,
-        # 80: EventRemaps.semPut,
+        80: SemPutEvent,
         83: SemGetEvent,
         # 103: EventRemaps.threadIdentify,
         # 107: EventRemaps.threadPreemptionChange,
