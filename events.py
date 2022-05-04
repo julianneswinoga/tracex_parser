@@ -5,6 +5,7 @@ class CommonArgsMap:
     obj_id = 'obj_id'
     stack_ptr = 'stack_ptr'
     thread_ptr = 'thread_ptr'
+    queue_ptr = 'queue_ptr'
     timeout = 'timeout'
 
 
@@ -43,22 +44,35 @@ class TraceXEvent:
             raise Exception(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
         return {k: v for k, v in zip(arg_names, self.raw_args)}
 
+    def _decode_registry_obj_name(self, raw_obj_name) -> Optional[str]:
+        try:
+            return raw_obj_name.decode('ASCII')
+        except UnicodeDecodeError:
+            print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
+            return None
+
     def apply_object_registry(self, object_registry: List):
         # This can be done for all objects
 
         if CommonArgsMap.obj_id in self.mapped_args:
+            # Try to find obj_id in the registry
             for obj in object_registry:
                 if self.mapped_args[CommonArgsMap.obj_id] == obj['thread_reg_entry_obj_pointer']:
-                    self.mapped_args[CommonArgsMap.obj_id] = obj['thread_reg_entry_obj_name'].decode('ASCII')
+                    decoded_name = self._decode_registry_obj_name(obj['thread_reg_entry_obj_name'])
+                    if decoded_name is not None:
+                        self.mapped_args[CommonArgsMap.obj_id] = decoded_name
                     break
 
         # Make the thread names nicer
         if self.thread_ptr == 0xFFFFFFFF:
             self.thread_name = 'INTERRUPT'
         else:
+            # Try to find thread_ptr in the registry
             for obj in object_registry:
                 if self.thread_ptr == obj['thread_reg_entry_obj_pointer']:
-                    self.thread_name = obj['thread_reg_entry_obj_name'].decode('ASCII')
+                    decoded_name = self._decode_registry_obj_name(obj['thread_reg_entry_obj_name'])
+                    if decoded_name is not None:
+                        self.thread_name = decoded_name
                     break
 
 
@@ -67,14 +81,9 @@ see tx_trace.h for all these mappings
 """
 
 
-class SemPutEvent(TraceXEvent):
-    fn_name = 'semPut'
-    arg_map = [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']
-
-
-class SemGetEvent(TraceXEvent):
-    fn_name = 'semGet'
-    arg_map = [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]
+class ThreadResumeEvent(TraceXEvent):
+    fn_name = 'threadResume'
+    arg_map = [CommonArgsMap.thread_ptr, 'previous_state', CommonArgsMap.stack_ptr, 'next_thread']
 
 
 class ISREnterEvent(TraceXEvent):
@@ -92,6 +101,11 @@ class TimeSliceEvent(TraceXEvent):
     arg_map = ['nxt_thread', 'sys_state', 'preempt_disable', CommonArgsMap.stack_ptr]
 
 
+class RunningEvent(TraceXEvent):
+    fn_name = 'running'
+    arg_map = ['_1', '_2', '_3', '_4']  # No args that we care about
+
+
 class MtxGetEvent(TraceXEvent):
     fn_name = 'mtxGet'
     arg_map = [CommonArgsMap.obj_id, CommonArgsMap.timeout, '_3', '_4']
@@ -100,6 +114,26 @@ class MtxGetEvent(TraceXEvent):
 class MtxPutEvent(TraceXEvent):
     fn_name = 'mtxPut'
     arg_map = [CommonArgsMap.obj_id, 'owning_thread', 'own_cnt', CommonArgsMap.stack_ptr]
+
+
+class QueueReceiveEvent(TraceXEvent):
+    fn_name = 'queueReceive'
+    arg_map = [CommonArgsMap.queue_ptr, 'dst_ptr', CommonArgsMap.timeout, 'enqueued']
+
+
+class QueueSendEvent(TraceXEvent):
+    fn_name = 'queueSend'
+    arg_map = [CommonArgsMap.queue_ptr, 'src_ptr', CommonArgsMap.timeout, 'enqueued']
+
+
+class SemPutEvent(TraceXEvent):
+    fn_name = 'semPut'
+    arg_map = [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']
+
+
+class SemGetEvent(TraceXEvent):
+    fn_name = 'semGet'
+    arg_map = [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]
 
 
 class ThreadIdEvent(TraceXEvent):
@@ -119,11 +153,15 @@ class TimeGetEvent(TraceXEvent):
 
 def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceXEvent:
     id_map = {
+        1: ThreadResumeEvent,
         3: ISREnterEvent,
         4: ISRExitEvent,
         5: TimeSliceEvent,
+        6: RunningEvent,
         52: MtxGetEvent,
         57: MtxPutEvent,
+        68: QueueReceiveEvent,
+        69: QueueSendEvent,
         80: SemPutEvent,
         83: SemGetEvent,
         103: ThreadIdEvent,
