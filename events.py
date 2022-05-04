@@ -103,41 +103,44 @@ def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassV
      })
 
 
+# see tx_trace.h for all these mappings
+id_map = {
+    1: tracex_event_factory('ThreadResumeEvent', 'threadResume',
+                            [CommonArgsMap.thread_ptr, 'prev_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
+    3: tracex_event_factory('ISREnterEvent', 'isrEnter',
+                            [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
+    4: tracex_event_factory('ISRExitEvent', 'isrExit',
+                            [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
+    5: tracex_event_factory('TimeSliceEvent', 'timeSlice',
+                            ['nxt_thread', 'sys_state', 'preempt_disable', CommonArgsMap.stack_ptr]),
+    6: tracex_event_factory('RunningEvent', 'running',
+                              ['_1', '_2', '_3', '_4']),  # No args that we care about
+    52: tracex_event_factory('MtxGetEvent', 'mtxGet',
+                             [CommonArgsMap.obj_id, CommonArgsMap.timeout, '_3', '_4']),
+    57: tracex_event_factory('MtxPutEvent', 'mtxPut',
+                             [CommonArgsMap.obj_id, 'owning_thread', 'own_cnt', CommonArgsMap.stack_ptr]),
+    68: tracex_event_factory('QueueReceiveEvent', 'queueReceive',
+                             [CommonArgsMap.queue_ptr, 'dst_ptr', CommonArgsMap.timeout, 'enqueued']),
+    69: tracex_event_factory('QueueSendEvent', 'queueSend',
+                             [CommonArgsMap.queue_ptr, 'src_ptr', CommonArgsMap.timeout, 'enqueued']),
+    80: tracex_event_factory('SemPutEvent', 'semPut',
+                             [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
+    83: tracex_event_factory('SemGetEvent', 'semGet',
+                             [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]),
+    103: tracex_event_factory('ThreadIdEvent', 'threadIdentify',
+                              ['_1', '_2', '_3', '_4']),  # No args that we care about
+    107: tracex_event_factory('ThreadPreemptionChangeEvent', 'preemptionChange',
+                              ['next_ctx', 'new_thresh', 'old_thresh', 'thread_state']),
+    120: tracex_event_factory('TimeGetEvent', 'getTicks',
+                              ['cur_ticks', 'next_ctx', '_3', '_4']),
+}
+
+
 def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceXEvent:
-    # see tx_trace.h for all these mappings
-    id_map = {
-        1: tracex_event_factory('ThreadResumeEvent', 'threadResume',
-                                [CommonArgsMap.thread_ptr, 'previous_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
-        3: tracex_event_factory('ISREnterEvent', 'isrEnter',
-                                [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
-        4: tracex_event_factory('ISRExitEvent', 'isrExit',
-                                [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
-        5: tracex_event_factory('TimeSliceEvent', 'timeSlice',
-                                ['nxt_thread', 'sys_state', 'preempt_disable', CommonArgsMap.stack_ptr]),
-        6: tracex_event_factory('RunningEvent', 'running',
-                                  ['_1', '_2', '_3', '_4']),  # No args that we care about
-        52: tracex_event_factory('MtxGetEvent', 'mtxGet',
-                                 [CommonArgsMap.obj_id, CommonArgsMap.timeout, '_3', '_4']),
-        57: tracex_event_factory('MtxPutEvent', 'mtxPut',
-                                 [CommonArgsMap.obj_id, 'owning_thread', 'own_cnt', CommonArgsMap.stack_ptr]),
-        68: tracex_event_factory('QueueReceiveEvent', 'queueReceive',
-                                 [CommonArgsMap.queue_ptr, 'dst_ptr', CommonArgsMap.timeout, 'enqueued']),
-        69: tracex_event_factory('QueueSendEvent', 'queueSend',
-                                 [CommonArgsMap.queue_ptr, 'src_ptr', CommonArgsMap.timeout, 'enqueued']),
-        80: tracex_event_factory('SemPutEvent', 'semPut',
-                                 [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
-        83: tracex_event_factory('SemGetEvent', 'semGet',
-                                 [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]),
-        103: tracex_event_factory('ThreadIdEvent', 'threadIdentify',
-                                  ['_1', '_2', '_3', '_4']),  # No args that we care about
-        107: tracex_event_factory('ThreadPreemptionChangeEvent', 'preemptionChange',
-                                  ['next_ctx', 'new_thresh', 'old_thresh', 'thread_state']),
-        120: tracex_event_factory('TimeGetEvent', 'getTicks',
-                                  ['cur_ticks', 'next_ctx', '_3', '_4']),
-    }
     event_id = raw_event['event_id']
     raw_event_args = [raw_event['information_field_1'], raw_event['information_field_2'],
                       raw_event['information_field_3'], raw_event['information_field_4']]
+
     args = [raw_event['thread_pointer'], raw_event['thread_priority'], event_id,
             raw_event['time_stamp'], raw_event_args]
     if custom_events_map and event_id in custom_events_map:
