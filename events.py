@@ -100,13 +100,15 @@ def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassV
     return type(event_name, (TraceXEvent,), {
         'fn_name': fn_name,
         'arg_map': arg_map,
-     })
+    })
 
 
 # see tx_trace.h for all these mappings
 id_map = {
     1: tracex_event_factory('ThreadResumeEvent', 'threadResume',
                             [CommonArgsMap.thread_ptr, 'prev_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
+    2: tracex_event_factory('ThreadSuspendEvent', 'threadSuspend',
+                            [CommonArgsMap.thread_ptr, 'new_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
     3: tracex_event_factory('ISREnterEvent', 'isrEnter',
                             [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
     4: tracex_event_factory('ISRExitEvent', 'isrExit',
@@ -114,7 +116,11 @@ id_map = {
     5: tracex_event_factory('TimeSliceEvent', 'timeSlice',
                             ['nxt_thread', 'sys_state', 'preempt_disable', CommonArgsMap.stack_ptr]),
     6: tracex_event_factory('RunningEvent', 'running',
-                              ['_1', '_2', '_3', '_4']),  # No args that we care about
+                            ['_1', '_2', '_3', '_4']),  # No args that we care about
+    27: tracex_event_factory('ByteReleaseEvent', 'byteRelease',
+                             ['pool_ptr', 'mem_ptr', 'suspended', 'avail_bytes']),
+    32: tracex_event_factory('FlagsGetEvent', 'flagsGet',
+                             ['group_ptr', 'req_flags', 'cur_flags', 'get_opt']),
     52: tracex_event_factory('MtxGetEvent', 'mtxGet',
                              [CommonArgsMap.obj_id, CommonArgsMap.timeout, '_3', '_4']),
     57: tracex_event_factory('MtxPutEvent', 'mtxPut',
@@ -125,12 +131,22 @@ id_map = {
                              [CommonArgsMap.queue_ptr, 'src_ptr', CommonArgsMap.timeout, 'enqueued']),
     80: tracex_event_factory('SemPutEvent', 'semPut',
                              [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
+    82: tracex_event_factory('SemDeleteEvent', 'semDel',
+                             [CommonArgsMap.obj_id, CommonArgsMap.stack_ptr, '_3', '_4']),
     83: tracex_event_factory('SemGetEvent', 'semGet',
                              [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]),
+    101: tracex_event_factory('ThreadDeleteEvent', 'threadDelete',
+                              [CommonArgsMap.thread_ptr, CommonArgsMap.stack_ptr, '_3', '_4']),
     103: tracex_event_factory('ThreadIdEvent', 'threadIdentify',
                               ['_1', '_2', '_3', '_4']),  # No args that we care about
     107: tracex_event_factory('ThreadPreemptionChangeEvent', 'preemptionChange',
                               ['next_ctx', 'new_thresh', 'old_thresh', 'thread_state']),
+    109: tracex_event_factory('ThreadRelinquishEvent', 'threadRelinquish',
+                              [CommonArgsMap.stack_ptr, CommonArgsMap.next_thread, '_3', '_4']),
+    112: tracex_event_factory('ThreadSleepEvent', 'threadSleep',
+                              ['sleep_val', 'thread_state', CommonArgsMap.stack_ptr, '_4']),
+    115: tracex_event_factory('ThreadTerminateEvent', 'threadTerminate',
+                              [CommonArgsMap.thread_ptr, 'thread_state', CommonArgsMap.stack_ptr, '_4']),
     120: tracex_event_factory('TimeGetEvent', 'getTicks',
                               ['cur_ticks', 'next_ctx', '_3', '_4']),
 }
@@ -153,7 +169,8 @@ def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceX
         return TraceXEvent(*args)
 
 
-def convert_events(raw_events: List, object_registry: List, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
+def convert_events(raw_events: List, object_registry: List,
+                   custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
     x_events = []
     for raw_event in raw_events:
         x_event = convert_event(raw_event, custom_events_map)
