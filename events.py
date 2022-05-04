@@ -9,48 +9,57 @@ class CommonArgsMap:
 
 
 class TraceXEvent:
+    """
+    Base class for TraceX events. It can be instantiated directly but
+    the function and argument names will not be meaningful.
+    """
     fn_name: Optional[str] = None
-    arg_map: Optional[List] = None
+    # Underscore in the arg map means don't print it, by default print all args
+    arg_map: List[str] = ['arg1', 'arg2', 'arg3', 'arg4']
 
     def __init__(self, thread_ptr: int, thread_priority: int, event_id: int, timestamp: int, fn_args: List[int]):
         self.thread_ptr = thread_ptr
         self.thread_priority = thread_priority
         self.id = event_id
         self.timestamp = timestamp
-        self.args: Union[List, str] = fn_args
+        self.raw_args: List[int] = fn_args
 
         self.thread_name: Optional[str] = None
-        self.function_name: Optional[str] = None
-        self.mapped_args: Optional[Dict] = None
+        self.mapped_args: Dict = self._generate_arg_dict(self.arg_map)
 
     def __repr__(self):
         thread_str = self.thread_name if self.thread_name is not None else self.thread_ptr
-        fn_str = self.function_name if self.function_name is not None else self.id
-        if isinstance(self.args, list):
-            # No processing was done
-            if self.arg_map is None:
-                arg_str = ','.join(f'{arg_num}={hex(arg_val)}' for arg_num, arg_val in enumerate(self.args))
-            else:
-                arg_str = ','.join(f'{arg_name}={hex(arg_val)}' for arg_name, arg_val in zip(self.arg_map, self.args))
-        else:
-            arg_str = self.args
+        fn_str = self.fn_name if self.fn_name is not None else f'<TX ID#{self.id}>'
+        arg_strs = []
+        for arg_name, arg_val in zip(self.arg_map, self.raw_args):
+            if not arg_name.startswith('_'):
+                # Don't print arg names that start with an underscore
+                arg_strs.append(f'{arg_name}={hex(arg_val)}')
+        arg_str = ','.join(arg_strs)
         return f'{self.timestamp}:{thread_str} {fn_str}({arg_str})'
 
     def _generate_arg_dict(self, arg_names: List[str]) -> Dict[str, Any]:
-        return {k: v for k, v in zip(arg_names, self.args)}
+        if len(self.arg_map) != 4:
+            raise Exception(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
+        return {k: v for k, v in zip(arg_names, self.raw_args)}
 
     def apply_object_registry(self, object_registry: List):
         # This can be done for all objects
-        self.function_name = self.fn_name
-        if self.arg_map:
-            self.mapped_args = self._generate_arg_dict(self.arg_map)
 
+        if CommonArgsMap.obj_id in self.mapped_args:
+            for obj in object_registry:
+                if self.mapped_args[CommonArgsMap.obj_id] == obj['thread_reg_entry_obj_pointer']:
+                    self.mapped_args[CommonArgsMap.obj_id] = obj['thread_reg_entry_obj_name'].decode('ASCII')
+                    break
+
+        # Make the thread names nicer
         if self.thread_ptr == 0xFFFFFFFF:
             self.thread_name = 'INTERRUPT'
         else:
             for obj in object_registry:
-                if self.thread_ptr == obj['thread_registry_entry_object_pointer']:
-                    self.thread_name = obj['thread_registry_entry_object_name'].decode('ASCII')
+                if self.thread_ptr == obj['thread_reg_entry_obj_pointer']:
+                    self.thread_name = obj['thread_reg_entry_obj_name'].decode('ASCII')
+                    break
 
 
 """
@@ -60,20 +69,12 @@ see tx_trace.h for all these mappings
 
 class SemPutEvent(TraceXEvent):
     fn_name = 'semPut'
-    arg_map = [CommonArgsMap.obj_id, 'timeout', 'cur_cnt', 'stack_ptr']
-
-    def apply_object_registry(self, object_registry: List):
-        super().apply_object_registry(object_registry)
-        self.args = f"sem_id={hex(self.mapped_args[CommonArgsMap.obj_id])}, stack_ptr={hex(self.mapped_args['stack_ptr'])}"
+    arg_map = [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']
 
 
 class SemGetEvent(TraceXEvent):
     fn_name = 'semGet'
-    arg_map = [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']
-
-    def apply_object_registry(self, object_registry: List):
-        super().apply_object_registry(object_registry)
-        self.args = f"sem_id={hex(self.mapped_args[CommonArgsMap.obj_id])}, cur_cnt={hex(self.mapped_args['cur_cnt'])}"
+    arg_map = [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]
 
 
 class ISREnterEvent(TraceXEvent):
@@ -103,7 +104,7 @@ class MtxPutEvent(TraceXEvent):
 
 class ThreadIdEvent(TraceXEvent):
     fn_name = 'threadIdentify'
-    arg_map = ['_1', '_2', '_3', '_4']
+    arg_map = ['_1', '_2', '_3', '_4']  # No args that we care about
 
 
 class ThreadPreemptionChangeEvent(TraceXEvent):
@@ -116,7 +117,7 @@ class TimeGetEvent(TraceXEvent):
     arg_map = ['cur_ticks', 'next_ctx', '_3', '_4']
 
 
-def convert_event(raw_event, custom_events_map) -> TraceXEvent:
+def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceXEvent:
     id_map = {
         3: ISREnterEvent,
         4: ISRExitEvent,
@@ -134,15 +135,17 @@ def convert_event(raw_event, custom_events_map) -> TraceXEvent:
                       raw_event['information_field_3'], raw_event['information_field_4']]
     args = [raw_event['thread_pointer'], raw_event['thread_priority'], event_id,
             raw_event['time_stamp'], raw_event_args]
-    if event_id in id_map:
-        return id_map[event_id](*args)
-    elif event_id in custom_events_map:
+    if custom_events_map and event_id in custom_events_map:
+        # Check custom events first
         return custom_events_map[event_id](*args)
+    elif event_id in id_map:
+        return id_map[event_id](*args)
     else:
+        # We don't have a lookup, create a base event
         return TraceXEvent(*args)
 
 
-def convert_events(raw_events: List, object_registry: List, custom_events_map: Dict[int, TraceXEvent]) -> List[TraceXEvent]:
+def convert_events(raw_events: List, object_registry: List, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
     x_events = []
     for raw_event in raw_events:
         x_event = convert_event(raw_event, custom_events_map)
