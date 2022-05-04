@@ -2,11 +2,17 @@ from typing import *
 
 
 class CommonArgsMap:
-    obj_id = 'obj_id'
+    """
+    This holds string mappings for common arguments so that we can
+    reference this mapping in TraceXEvent, instead of a raw string.
+    """
     stack_ptr = 'stack_ptr'
-    thread_ptr = 'thread_ptr'
     queue_ptr = 'queue_ptr'
     timeout = 'timeout'
+    # The following will attempted to be looked up in the object registry and mapped to strings
+    obj_id = 'obj_id'
+    thread_ptr = 'thread_ptr'
+    next_thread = 'next_thread'
 
 
 class TraceXEvent:
@@ -26,16 +32,21 @@ class TraceXEvent:
         self.raw_args: List[int] = fn_args
 
         self.thread_name: Optional[str] = None
-        self.mapped_args: Dict = self._generate_arg_dict(self.arg_map)
+        self.mapped_args: Dict[str, Union[int, str]] = self._generate_arg_dict(self.arg_map)
 
     def __repr__(self):
         thread_str = self.thread_name if self.thread_name is not None else self.thread_ptr
         fn_str = self.fn_name if self.fn_name is not None else f'<TX ID#{self.id}>'
         arg_strs = []
-        for arg_name, arg_val in zip(self.arg_map, self.raw_args):
-            if not arg_name.startswith('_'):
+        for arg_name, arg_val in self.mapped_args.items():
+            if arg_name.startswith('_'):
                 # Don't print arg names that start with an underscore
+                continue
+            if isinstance(arg_val, int):
+                # For this printing always convert raw integers to hex
                 arg_strs.append(f'{arg_name}={hex(arg_val)}')
+            else:
+                arg_strs.append(f'{arg_name}={arg_val}')
         arg_str = ','.join(arg_strs)
         return f'{self.timestamp}:{thread_str} {fn_str}({arg_str})'
 
@@ -44,36 +55,45 @@ class TraceXEvent:
             raise Exception(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
         return {k: v for k, v in zip(arg_names, self.raw_args)}
 
-    def _decode_registry_obj_name(self, raw_obj_name) -> Optional[str]:
-        try:
-            return raw_obj_name.decode('ASCII')
-        except UnicodeDecodeError:
-            print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
-            return None
+    def _map_ptr_to_obj_reg_name(self, object_registry: List, key_ptr: int) -> Optional[str]:
+        for obj in object_registry:
+            if key_ptr == obj['thread_reg_entry_obj_pointer']:
+                raw_obj_name = obj['thread_reg_entry_obj_name']
+                try:
+                    return raw_obj_name.decode('ASCII')
+                except UnicodeDecodeError:
+                    print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
+                    return None
+        print(f'Cant find {key_ptr} in objreg')
+        return None
 
     def apply_object_registry(self, object_registry: List):
         # This can be done for all objects
 
-        if CommonArgsMap.obj_id in self.mapped_args:
-            # Try to find obj_id in the registry
-            for obj in object_registry:
-                if self.mapped_args[CommonArgsMap.obj_id] == obj['thread_reg_entry_obj_pointer']:
-                    decoded_name = self._decode_registry_obj_name(obj['thread_reg_entry_obj_name'])
-                    if decoded_name is not None:
-                        self.mapped_args[CommonArgsMap.obj_id] = decoded_name
-                    break
+        # Change mapped arguments to strings if they can be found in the registry
+        args_to_map = [CommonArgsMap.obj_id, CommonArgsMap.thread_ptr, CommonArgsMap.next_thread]
+        for arg_to_map in args_to_map:
+            if arg_to_map in self.mapped_args.keys():
+                obj_reg_name = self._map_ptr_to_obj_reg_name(object_registry, self.mapped_args[arg_to_map])
+                if obj_reg_name is not None:
+                    self.mapped_args[arg_to_map] = obj_reg_name
 
         # Make the thread names nicer
         if self.thread_ptr == 0xFFFFFFFF:
             self.thread_name = 'INTERRUPT'
         else:
-            # Try to find thread_ptr in the registry
-            for obj in object_registry:
-                if self.thread_ptr == obj['thread_reg_entry_obj_pointer']:
-                    decoded_name = self._decode_registry_obj_name(obj['thread_reg_entry_obj_name'])
-                    if decoded_name is not None:
-                        self.thread_name = decoded_name
-                    break
+            # Try to find time slice thread_ptr in the registry
+            obj_reg_name = self._map_ptr_to_obj_reg_name(object_registry, self.thread_ptr)
+            if obj_reg_name is not None:
+                self.thread_name = obj_reg_name
+
+        # Make timeouts nicer
+        if CommonArgsMap.timeout in self.mapped_args.keys():
+            # Replace if it's in the lookup, no replacement otherwise
+            self.mapped_args[CommonArgsMap.timeout] = {
+                0: 'NoWait',
+                0xFFFFFFFF: 'WaitForever',
+            }.get(self.mapped_args[CommonArgsMap.timeout], self.mapped_args[CommonArgsMap.timeout])
 
 
 """
@@ -83,7 +103,7 @@ see tx_trace.h for all these mappings
 
 class ThreadResumeEvent(TraceXEvent):
     fn_name = 'threadResume'
-    arg_map = [CommonArgsMap.thread_ptr, 'previous_state', CommonArgsMap.stack_ptr, 'next_thread']
+    arg_map = [CommonArgsMap.thread_ptr, 'previous_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]
 
 
 class ISREnterEvent(TraceXEvent):
