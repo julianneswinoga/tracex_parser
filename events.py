@@ -1,7 +1,7 @@
 from typing import *
 
 
-class CommonArgsMap:
+class CommonArg:
     """
     This holds string mappings for common arguments so that we can
     reference this mapping in TraceXEvent, instead of a raw string.
@@ -71,7 +71,7 @@ class TraceXEvent:
         # This can be done for all objects
 
         # Change mapped arguments to strings if they can be found in the registry
-        args_to_map = [CommonArgsMap.obj_id, CommonArgsMap.thread_ptr, CommonArgsMap.next_thread]
+        args_to_map = [CommonArg.obj_id, CommonArg.thread_ptr, CommonArg.next_thread]
         for arg_to_map in args_to_map:
             if arg_to_map in self.mapped_args.keys():
                 obj_reg_name = self._map_ptr_to_obj_reg_name(object_registry, self.mapped_args[arg_to_map])
@@ -88,12 +88,12 @@ class TraceXEvent:
                 self.thread_name = obj_reg_name
 
         # Make timeouts nicer
-        if CommonArgsMap.timeout in self.mapped_args.keys():
+        if CommonArg.timeout in self.mapped_args.keys():
             # Replace if it's in the lookup, no replacement otherwise
-            self.mapped_args[CommonArgsMap.timeout] = {
+            self.mapped_args[CommonArg.timeout] = {
                 0: 'NoWait',
                 0xFFFFFFFF: 'WaitForever',
-            }.get(self.mapped_args[CommonArgsMap.timeout], self.mapped_args[CommonArgsMap.timeout])
+            }.get(self.mapped_args[CommonArg.timeout], self.mapped_args[CommonArg.timeout])
 
 
 def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassVar:
@@ -106,21 +106,21 @@ def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassV
 # see tx_trace.h for all these mappings
 id_map = {
     1: tracex_event_factory('ThreadResumeEvent', 'threadResume',
-                            [CommonArgsMap.thread_ptr, 'prev_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
+                            [CommonArg.thread_ptr, 'prev_state', CommonArg.stack_ptr, CommonArg.next_thread]),
     2: tracex_event_factory('ThreadSuspendEvent', 'threadSuspend',
-                            [CommonArgsMap.thread_ptr, 'new_state', CommonArgsMap.stack_ptr, CommonArgsMap.next_thread]),
+                            [CommonArg.thread_ptr, 'new_state', CommonArg.stack_ptr, CommonArg.next_thread]),
     3: tracex_event_factory('ISREnterEvent', 'isrEnter',
-                            [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
+                            [CommonArg.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
     4: tracex_event_factory('ISRExitEvent', 'isrExit',
-                            [CommonArgsMap.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
+                            [CommonArg.stack_ptr, 'isr_num', 'sys_state', 'preempt_dis']),
     5: tracex_event_factory('TimeSliceEvent', 'timeSlice',
-                            ['nxt_thread', 'sys_state', 'preempt_disable', CommonArgsMap.stack_ptr]),
+                            ['nxt_thread', 'sys_state', 'preempt_disable', CommonArg.stack_ptr]),
     6: tracex_event_factory('RunningEvent', 'running',
                             ['_1', '_2', '_3', '_4']),  # No args that we care about
     10: tracex_event_factory('BlockAllocateEvent', 'blockAlloc',
-                             ['pool_ptr', 'mem_ptr', CommonArgsMap.timeout, 'rem_blocks']),
+                             ['pool_ptr', 'mem_ptr', CommonArg.timeout, 'rem_blocks']),
     17: tracex_event_factory('BlockReleaseEvent', 'blockRelease',
-                             ['pool_ptr', 'mem_ptr', 'suspended', CommonArgsMap.stack_ptr]),
+                             ['pool_ptr', 'mem_ptr', 'suspended', CommonArg.stack_ptr]),
     27: tracex_event_factory('ByteReleaseEvent', 'byteRelease',
                              ['pool_ptr', 'mem_ptr', 'suspended', 'avail_bytes']),
     32: tracex_event_factory('FlagsGetEvent', 'flagsGet',
@@ -128,33 +128,33 @@ id_map = {
     36: tracex_event_factory('FlagsSetEvent', 'flagsSet',
                              ['group_ptr', 'flags', 'set_opt', 'suspend_cnt']),
     52: tracex_event_factory('MtxGetEvent', 'mtxGet',
-                             [CommonArgsMap.obj_id, CommonArgsMap.timeout, '_3', '_4']),
+                             [CommonArg.obj_id, CommonArg.timeout, '_3', '_4']),
     56: tracex_event_factory('MtxPrioritizeEvent', 'mtxPrioritize',
-                             [CommonArgsMap.obj_id, 'suspend_cnt', CommonArgsMap.stack_ptr, '_4']),
+                             [CommonArg.obj_id, 'suspend_cnt', CommonArg.stack_ptr, '_4']),
     57: tracex_event_factory('MtxPutEvent', 'mtxPut',
-                             [CommonArgsMap.obj_id, 'owning_thread', 'own_cnt', CommonArgsMap.stack_ptr]),
+                             [CommonArg.obj_id, 'owning_thread', 'own_cnt', CommonArg.stack_ptr]),
     68: tracex_event_factory('QueueReceiveEvent', 'queueReceive',
-                             [CommonArgsMap.queue_ptr, 'dst_ptr', CommonArgsMap.timeout, 'enqueued']),
+                             [CommonArg.queue_ptr, 'dst_ptr', CommonArg.timeout, 'enqueued']),
     69: tracex_event_factory('QueueSendEvent', 'queueSend',
-                             [CommonArgsMap.queue_ptr, 'src_ptr', CommonArgsMap.timeout, 'enqueued']),
+                             [CommonArg.queue_ptr, 'src_ptr', CommonArg.timeout, 'enqueued']),
     80: tracex_event_factory('SemPutEvent', 'semPut',
-                             [CommonArgsMap.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
+                             [CommonArg.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
     82: tracex_event_factory('SemDeleteEvent', 'semDel',
-                             [CommonArgsMap.obj_id, CommonArgsMap.stack_ptr, '_3', '_4']),
+                             [CommonArg.obj_id, CommonArg.stack_ptr, '_3', '_4']),
     83: tracex_event_factory('SemGetEvent', 'semGet',
-                             [CommonArgsMap.obj_id, CommonArgsMap.timeout, 'cur_cnt', CommonArgsMap.stack_ptr]),
+                             [CommonArg.obj_id, CommonArg.timeout, 'cur_cnt', CommonArg.stack_ptr]),
     101: tracex_event_factory('ThreadDeleteEvent', 'threadDelete',
-                              [CommonArgsMap.thread_ptr, CommonArgsMap.stack_ptr, '_3', '_4']),
+                              [CommonArg.thread_ptr, CommonArg.stack_ptr, '_3', '_4']),
     103: tracex_event_factory('ThreadIdEvent', 'threadIdentify',
                               ['_1', '_2', '_3', '_4']),  # No args that we care about
     107: tracex_event_factory('ThreadPreemptionChangeEvent', 'preemptionChange',
                               ['next_ctx', 'new_thresh', 'old_thresh', 'thread_state']),
     109: tracex_event_factory('ThreadRelinquishEvent', 'threadRelinquish',
-                              [CommonArgsMap.stack_ptr, CommonArgsMap.next_thread, '_3', '_4']),
+                              [CommonArg.stack_ptr, CommonArg.next_thread, '_3', '_4']),
     112: tracex_event_factory('ThreadSleepEvent', 'threadSleep',
-                              ['sleep_val', 'thread_state', CommonArgsMap.stack_ptr, '_4']),
+                              ['sleep_val', 'thread_state', CommonArg.stack_ptr, '_4']),
     115: tracex_event_factory('ThreadTerminateEvent', 'threadTerminate',
-                              [CommonArgsMap.thread_ptr, 'thread_state', CommonArgsMap.stack_ptr, '_4']),
+                              [CommonArg.thread_ptr, 'thread_state', CommonArg.stack_ptr, '_4']),
     120: tracex_event_factory('TimeGetEvent', 'getTicks',
                               ['cur_ticks', 'next_ctx', '_3', '_4']),
 }
