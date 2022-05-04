@@ -187,6 +187,19 @@ def main():
         print(f'total events: {len(tracex_events)}')
         total_ticks = tracex_events[-1].timestamp - tracex_events[0].timestamp
         print(f'delta ticks: {total_ticks}')
+
+        print('Event Histogram:')
+        events_histogram = {}
+        for tracex_event in tracex_events:
+            event_id = tracex_event.fn_name if tracex_event.fn_name else tracex_event.id
+            if event_id in events_histogram:
+                events_histogram[event_id] += 1
+            else:
+                events_histogram[event_id] = 1
+        for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
+            print(f'{event_id:<20}{events_histogram[event_id]}')
+
+        print('All events:')
         for tracex_event in tracex_events:
             print(tracex_event)
 
