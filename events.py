@@ -55,26 +55,23 @@ class TraceXEvent:
             raise Exception(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
         return {k: v for k, v in zip(arg_names, self.raw_args)}
 
-    def _map_ptr_to_obj_reg_name(self, object_registry: List, key_ptr: int) -> Optional[str]:
-        for obj in object_registry:
-            if key_ptr == obj['thread_reg_entry_obj_pointer']:
-                raw_obj_name = obj['thread_reg_entry_obj_name']
-                try:
-                    return raw_obj_name.decode('ASCII')
-                except UnicodeDecodeError:
-                    print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
-                    return None
+    def _map_ptr_to_obj_reg_name(self, obj_reg_map: Dict, key_ptr: int) -> Optional[str]:
+        if key_ptr in obj_reg_map:
+            raw_obj_name = obj_reg_map[key_ptr]['thread_reg_entry_obj_name']
+            try:
+                return raw_obj_name.decode('ASCII')
+            except UnicodeDecodeError:
+                print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
+                return None
         print(f'Cant find {key_ptr} in objreg')
         return None
 
-    def apply_object_registry(self, object_registry: List):
-        # This can be done for all objects
-
+    def apply_object_registry(self, obj_reg_map: Dict):
         # Change mapped arguments to strings if they can be found in the registry
         args_to_map = [CommonArg.obj_id, CommonArg.thread_ptr, CommonArg.next_thread]
         for arg_to_map in args_to_map:
             if arg_to_map in self.mapped_args.keys():
-                obj_reg_name = self._map_ptr_to_obj_reg_name(object_registry, self.mapped_args[arg_to_map])
+                obj_reg_name = self._map_ptr_to_obj_reg_name(obj_reg_map, self.mapped_args[arg_to_map])
                 if obj_reg_name is not None:
                     self.mapped_args[arg_to_map] = obj_reg_name
 
@@ -83,7 +80,7 @@ class TraceXEvent:
             self.thread_name = 'INTERRUPT'
         else:
             # Try to find time slice thread_ptr in the registry
-            obj_reg_name = self._map_ptr_to_obj_reg_name(object_registry, self.thread_ptr)
+            obj_reg_name = self._map_ptr_to_obj_reg_name(obj_reg_map, self.thread_ptr)
             if obj_reg_name is not None:
                 self.thread_name = obj_reg_name
 
@@ -179,11 +176,11 @@ def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceX
         return TraceXEvent(*args)
 
 
-def convert_events(raw_events: List, object_registry: List,
+def convert_events(raw_events: List, obj_reg_map: Dict,
                    custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
     x_events = []
     for raw_event in raw_events:
         x_event = convert_event(raw_event, custom_events_map)
-        x_event.apply_object_registry(object_registry)
+        x_event.apply_object_registry(obj_reg_map)
         x_events.append(x_event)
     return x_events

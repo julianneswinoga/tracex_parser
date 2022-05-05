@@ -94,7 +94,7 @@ def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CSt
     return control_header, control_header_end_idx
 
 
-def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
+def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[Dict[int, CStruct], int]:
     object_name_len = control_header['obj_reg_name_size']
     object_entry = CStruct(endian_str, [
         ('B', 'obj_reg_entry_obj_available **'),
@@ -114,16 +114,25 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
     num_objects = obj_reg_addr_range // object_size
 
     object_entry_start_idx = start_idx
-    object_registry = []
+    object_registry_arr = []
     for obj_idx in range(num_objects):
         object_entry.clear()
         object_entry_end_idx = object_entry_start_idx + object_size
         object_entry.unpack(buf[object_entry_start_idx:object_entry_end_idx])
         # trim trailing NULs
         object_entry['thread_reg_entry_obj_name'] = object_entry['thread_reg_entry_obj_name'].strip(b'\0')
-        object_registry.append(copy.deepcopy(object_entry))
+        object_registry_arr.append(copy.deepcopy(object_entry))
         object_entry_start_idx += object_size
-    return object_registry, object_entry_start_idx
+
+    obj_reg_map = {}
+    for obj in object_registry_arr:
+        obj_ptr = obj['thread_reg_entry_obj_pointer']
+        if obj_ptr != 0x0 and obj_ptr in obj_reg_map:
+            print(f'{obj} is has the same address of {obj_reg_map[obj_ptr]} in the object registry! Not overwriting')
+            continue
+        obj_reg_map[obj_ptr] = obj
+
+    return obj_reg_map, object_entry_start_idx
 
 
 def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
@@ -168,14 +177,13 @@ def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, Tra
     control_header, control_header_end_idx = get_control_header(endian_str, tracex_buf, header_id_end_idx)
 
     # Unpack object entries
-    object_registry, object_registry_end_idx = get_object_registry(endian_str, tracex_buf, control_header_end_idx,
-                                                                   control_header)
+    obj_reg_map, obj_reg_end_idx = get_object_registry(endian_str, tracex_buf, control_header_end_idx, control_header)
 
     # Unpack trace/event entries
-    raw_events, _ = get_event_entries(endian_str, tracex_buf, object_registry_end_idx, control_header)
+    raw_events, _event_end_idx = get_event_entries(endian_str, tracex_buf, obj_reg_end_idx, control_header)
 
     # Convert raw events to more human-understandable events, then apply the object registry
-    tracex_events = convert_events(raw_events, object_registry, custom_events_map)
+    tracex_events = convert_events(raw_events, obj_reg_map, custom_events_map)
     return tracex_events
 
 
