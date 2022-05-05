@@ -95,12 +95,20 @@ class TraceXEvent:
             }.get(self.mapped_args[CommonArg.timeout], self.mapped_args[CommonArg.timeout])
 
 
-def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassVar:
+def tracex_event_factory(class_name: str, fn_name: Optional[str] = True, arg_map: Optional[List] = None,
+                         class_name_is_fn_name: bool = False) -> ClassVar:
     # Create the event classes dynamically
-    return type(event_name, (TraceXEvent,), {
-        'fn_name': fn_name,
-        'arg_map': arg_map,
-    })
+    funct_name = class_name if class_name_is_fn_name else fn_name
+    if arg_map is not None:
+        class_params = {
+            'fn_name': funct_name,
+            'arg_map': arg_map,
+        }
+    else:
+        class_params = {
+            'fn_name': funct_name,
+        }
+    return type(class_name, (TraceXEvent,), class_params)
 
 
 # see tx_trace.h for all these mappings
