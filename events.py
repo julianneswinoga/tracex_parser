@@ -104,7 +104,7 @@ def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassV
 
 
 # see tx_trace.h for all these mappings
-id_map = {
+event_id_map = {
     1: tracex_event_factory('ThreadResumeEvent', 'threadResume',
                             [CommonArg.thread_ptr, 'prev_state', CommonArg.stack_ptr, CommonArg.next_thread]),
     2: tracex_event_factory('ThreadSuspendEvent', 'threadSuspend',
@@ -137,8 +137,10 @@ id_map = {
                              [CommonArg.queue_ptr, 'dst_ptr', CommonArg.timeout, 'enqueued']),
     69: tracex_event_factory('QueueSendEvent', 'queueSend',
                              [CommonArg.queue_ptr, 'src_ptr', CommonArg.timeout, 'enqueued']),
-    80: tracex_event_factory('SemPutEvent', 'semPut',
+    80: tracex_event_factory('SemCeilPutEvent', 'semCeilPut',
                              [CommonArg.obj_id, 'cur_cnt', 'suspend_cnt', 'ceiling']),
+    88: tracex_event_factory('SemPutEvent', 'semPut',
+                             [CommonArg.obj_id, 'cur_cnt', 'suspend_cnt', CommonArg.stack_ptr]),
     82: tracex_event_factory('SemDeleteEvent', 'semDel',
                              [CommonArg.obj_id, CommonArg.stack_ptr, '_3', '_4']),
     83: tracex_event_factory('SemGetEvent', 'semGet',
@@ -170,8 +172,8 @@ def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceX
     if custom_events_map and event_id in custom_events_map:
         # Check custom events first
         return custom_events_map[event_id](*args)
-    elif event_id in id_map:
-        return id_map[event_id](*args)
+    elif event_id in event_id_map:
+        return event_id_map[event_id](*args)
     else:
         # We don't have a lookup, create a base event
         return TraceXEvent(*args)
