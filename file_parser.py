@@ -58,7 +58,8 @@ def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CSt
     return control_header, control_header_end_idx
 
 
-def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[Dict[int, CStruct], int]:
+def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) \
+        -> Tuple[Dict[int, CStruct], int]:
     """
     @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-object-registry
     Unpacks the object registry into a list of dict-like CStructs
@@ -78,7 +79,8 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
 
     obj_reg_addr_range = (control_header['obj_reg_end_pointer'] - control_header['obj_reg_start_pointer'])
     if obj_reg_addr_range % object_size != 0:
-        raise TraceXParseException(f'Object registry range does not match object size: {obj_reg_addr_range}, {object_size}')
+        raise TraceXParseException(
+            f'Object registry range does not match object size: {obj_reg_addr_range}, {object_size}')
     num_objects = obj_reg_addr_range // object_size
 
     object_entry_start_idx = start_idx
@@ -103,7 +105,8 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
     return obj_reg_map, object_entry_start_idx
 
 
-def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
+def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) \
+        -> Tuple[List[CStruct], int]:
     """
     @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-entries
     Unpacks the TraceX events into a list of dict-like CStructs.
@@ -123,7 +126,8 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
 
     event_entry_addr_range = (control_header['buf_end_ptr'] - control_header['buf_start_ptr'])
     if event_entry_addr_range % event_size != 0:
-        raise TraceXParseException(f'Event entries range does not match event size: {event_entry_addr_range}, {event_size}')
+        raise TraceXParseException(
+            f'Event entries range does not match event size: {event_entry_addr_range}, {event_size}')
     num_entries = event_entry_addr_range // event_size
 
     event_entry_start_idx = start_idx
@@ -139,7 +143,8 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
     return raw_events, event_entry_start_idx
 
 
-def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
+def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) \
+        -> Tuple[List[TraceXEvent], Dict[int, CStruct]]:
     """
     Parse a TraceX binary dump (canonically .trx) into a list of TraceXEvent classes
     :param filepath: Path to where the TraceX file is
@@ -161,32 +166,35 @@ def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, Tra
 
     # Unpack trace/event entries
     raw_events, _event_end_idx = get_event_entries(endian_str, tracex_buf, obj_reg_end_idx, control_header)
+    # Could do some error checking here about the event end idx, but I don't think it would be worth it
 
     # Convert raw events to more human-understandable events, then apply the object registry
     tracex_events = convert_events(raw_events, obj_reg_map, custom_events_map)
-    return tracex_events
+    return tracex_events, obj_reg_map
 
 
 def main():
     for input_filepath in args.input_trxs:
         print(f'Parsing {input_filepath}')
-        tracex_events = parse_tracex_buffer(input_filepath)
+        tracex_events, obj_reg_map = parse_tracex_buffer(input_filepath)
         print(f'total events: {len(tracex_events)}')
+        print(f'object registry size: {len(obj_reg_map.keys())}')
         total_ticks = tracex_events[-1].timestamp - tracex_events[0].timestamp
         print(f'delta ticks: {total_ticks}')
 
-        print('Event Histogram:')
-        events_histogram = {}
-        for tracex_event in tracex_events:
-            event_id = tracex_event.fn_name if tracex_event.fn_name else tracex_event.id
-            if event_id in events_histogram:
-                events_histogram[event_id] += 1
-            else:
-                events_histogram[event_id] = 1
-        for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
-            print(f'{event_id:<20}{events_histogram[event_id]}')
+        if args.verbose > 0:
+            print('Event Histogram:')
+            events_histogram = {}
+            for tracex_event in tracex_events:
+                event_id = tracex_event.fn_name if tracex_event.fn_name else tracex_event.id
+                if event_id in events_histogram:
+                    events_histogram[event_id] += 1
+                else:
+                    events_histogram[event_id] = 1
+            for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
+                print(f'{event_id:<20}{events_histogram[event_id]}')
 
-        if args.verbose:
+        if args.verbose > 1:
             print('All events:')
             for tracex_event in tracex_events:
                 print(tracex_event)

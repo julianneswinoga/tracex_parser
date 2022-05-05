@@ -65,7 +65,7 @@ class TraceXEvent:
             except UnicodeDecodeError:
                 print(f'{self.__class__.__name__}: Could not decode {raw_obj_name} into ascii')
                 return None
-        print(f'Cant find {key_ptr} in objreg')
+        print(f'Cant find {hex(key_ptr)} in objreg')
         return None
 
     def apply_object_registry(self, obj_reg_map: Dict[int, CStruct]):
@@ -76,15 +76,20 @@ class TraceXEvent:
                 obj_reg_name = self._map_ptr_to_obj_reg_name(obj_reg_map, self.mapped_args[arg_to_map])
                 if obj_reg_name is not None:
                     self.mapped_args[arg_to_map] = obj_reg_name
+                else:
+                    print(f'Failed to map {arg_to_map} in {self.__class__.__name__}:{self.mapped_args}')
 
         # Make the thread names nicer
         if self.thread_ptr == 0xFFFFFFFF:
+            # @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#thread-pointer
             self.thread_name = 'INTERRUPT'
         else:
             # Try to find time slice thread_ptr in the registry
             obj_reg_name = self._map_ptr_to_obj_reg_name(obj_reg_map, self.thread_ptr)
             if obj_reg_name is not None:
                 self.thread_name = obj_reg_name
+            else:
+                print(f'Failed to map thread_ptr in {self.__class__.__name__}:{self.mapped_args}')
 
         # Make timeouts nicer
         if CommonArg.timeout in self.mapped_args.keys():
