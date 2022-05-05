@@ -94,8 +94,7 @@ def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CSt
     return control_header, control_header_end_idx
 
 
-def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[
-    List[CStruct], int]:
+def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
     object_name_len = control_header['obj_reg_name_size']
     object_entry = CStruct(endian_str, [
         ('B', 'obj_reg_entry_obj_available **'),
