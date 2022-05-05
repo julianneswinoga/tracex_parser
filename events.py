@@ -3,7 +3,7 @@ from typing import *
 
 class CommonArg:
     """
-    This holds string mappings for common arguments so that we can
+    Holds string mappings for common arguments so that we can
     reference this mapping in TraceXEvent, instead of a raw string.
     """
     stack_ptr = 'stack_ptr'
@@ -94,6 +94,7 @@ class TraceXEvent:
 
 
 def tracex_event_factory(event_name: str, fn_name: str, arg_map: List) -> ClassVar:
+    # Create the event classes dynamically
     return type(event_name, (TraceXEvent,), {
         'fn_name': fn_name,
         'arg_map': arg_map,
@@ -161,10 +162,10 @@ event_id_map = {
 
 def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceXEvent:
     event_id = raw_event['event_id']
-    raw_event_args = [raw_event['information_field_1'], raw_event['information_field_2'],
-                      raw_event['information_field_3'], raw_event['information_field_4']]
+    raw_event_args = [raw_event['info_field_1'], raw_event['info_field_2'],
+                      raw_event['info_field_3'], raw_event['info_field_4']]
 
-    args = [raw_event['thread_pointer'], raw_event['thread_priority'], event_id,
+    args = [raw_event['thread_ptr'], raw_event['thread_priority'], event_id,
             raw_event['time_stamp'], raw_event_args]
     if custom_events_map and event_id in custom_events_map:
         # Check custom events first

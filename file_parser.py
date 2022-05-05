@@ -11,14 +11,14 @@ parser = argparse.ArgumentParser(description="""
 TraceX parser module, intended as a library but can be used as a standalone script""")
 parser.add_argument('input_trxs', nargs='+', action='store',
                     help='Path to the input trx file(s) that contains TraceX event data')
-
-"""
-see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11 for
-documentation on how a TraceX buffer is formatted
-"""
+parser.add_argument('-v', '--verbose', action='count', default=0,
+                    help='Set the verbosity of logging')
 
 
 class CStruct:
+    """
+    Dict-like helper class to help unpack raw binary data into a dictionary
+    """
     def __init__(self, endian_str: str, fields: List[Tuple[str, str]]):
         self.data = {}
         self.endian_str = endian_str
@@ -60,6 +60,9 @@ class CStruct:
 
 
 def get_endian_str(buf: bytes) -> Tuple[str, int]:
+    """
+    Returns the endianness of the TraceX dump based on the first couple bytes
+    """
     magic_file_str = b'TXTB'
     magic_str_size = len(magic_file_str)
     magic_file_number_big = int('0x' + magic_file_str.hex(), 16)
@@ -75,6 +78,10 @@ def get_endian_str(buf: bytes) -> Tuple[str, int]:
 
 
 def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CStruct, int]:
+    """
+    @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-control-header
+    Unpacks the control header into a dict-like CStruct
+    """
     control_header = CStruct(endian_str, [
         ('L', 'timer_valid_mask'),
         ('L', 'trace_base_address'),
@@ -82,9 +89,9 @@ def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CSt
         ('H', 'reserved1'),
         ('H', 'obj_reg_name_size'),
         ('L', 'obj_reg_end_pointer'),
-        ('L', 'buffer_start_pointer'),
-        ('L', 'buffer_end_pointer'),
-        ('L', 'buffer_current_pointer'),
+        ('L', 'buf_start_ptr'),
+        ('L', 'buf_end_ptr'),
+        ('L', 'buf_cur_ptr'),
         ('L', 'reserved2'),
         ('L', 'reserved3'),
         ('L', 'reserved4'),
@@ -95,13 +102,17 @@ def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CSt
 
 
 def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[Dict[int, CStruct], int]:
+    """
+    @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-object-registry
+    Unpacks the object registry into a list of dict-like CStructs
+    """
     object_name_len = control_header['obj_reg_name_size']
     object_entry = CStruct(endian_str, [
         ('B', 'obj_reg_entry_obj_available **'),
         ('B', 'obj_reg_entry_obj_type **'),
-        ('B', 'obj_reg_entry_obj_reserved1'),
-        ('B', 'obj_reg_entry_obj_reserved2'),
-        ('L', 'thread_reg_entry_obj_pointer'),
+        ('B', 'reserved1'),
+        ('B', 'reserved2'),
+        ('L', 'thread_reg_entry_obj_ptr'),
         ('L', 'obj_reg_entry_obj_parameter_1'),
         ('L', 'obj_reg_entry_obj_parameter_2'),
         (f'{object_name_len}s', 'thread_reg_entry_obj_name'),
@@ -126,7 +137,7 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
 
     obj_reg_map = {}
     for obj in object_registry_arr:
-        obj_ptr = obj['thread_reg_entry_obj_pointer']
+        obj_ptr = obj['thread_reg_entry_obj_ptr']
         if obj_ptr != 0x0 and obj_ptr in obj_reg_map:
             print(f'{obj} is has the same address of {obj_reg_map[obj_ptr]} in the object registry! Not overwriting')
             continue
@@ -136,19 +147,24 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
 
 
 def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_header: CStruct) -> Tuple[List[CStruct], int]:
+    """
+    @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-entries
+    Unpacks the TraceX events into a list of dict-like CStructs.
+    Events are sorted by their timestamp.
+    """
     event_entry = CStruct(endian_str, [
-        ('L', 'thread_pointer'),
+        ('L', 'thread_ptr'),
         ('L', 'thread_priority'),
         ('L', 'event_id'),
         ('L', 'time_stamp'),
-        ('L', 'information_field_1'),
-        ('L', 'information_field_2'),
-        ('L', 'information_field_3'),
-        ('L', 'information_field_4'),
+        ('L', 'info_field_1'),
+        ('L', 'info_field_2'),
+        ('L', 'info_field_3'),
+        ('L', 'info_field_4'),
     ])
     event_size = event_entry.total_size()
 
-    event_entry_addr_range = (control_header['buffer_end_pointer'] - control_header['buffer_start_pointer'])
+    event_entry_addr_range = (control_header['buf_end_ptr'] - control_header['buf_start_ptr'])
     if event_entry_addr_range % event_size != 0:
         raise Exception(f'Event entries range does not match event size: {event_entry_addr_range}, {event_size}')
     num_entries = event_entry_addr_range // event_size
@@ -167,7 +183,14 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
 
 
 def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
-    # format is control header, object registry entries, trace/event entries
+    """
+    Parse a TraceX binary dump (canonically .trx) into a list of TraceXEvent classes
+    :param filepath: Path to where the TraceX file is
+    :param custom_events_map: Dictionary of {id: TraceXEvents} to map custom events (id >= 4096) into human-readable
+    events.
+    :return: List of TraceX events
+    """
+    # Overall format is control header, object registry entries, trace/event entries
     with open(filepath, 'rb') as fp:
         tracex_buf = fp.read()
 
@@ -206,9 +229,10 @@ def main():
         for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
             print(f'{event_id:<20}{events_histogram[event_id]}')
 
-        print('All events:')
-        for tracex_event in tracex_events:
-            print(tracex_event)
+        if args.verbose:
+            print('All events:')
+            for tracex_event in tracex_events:
+                print(tracex_event)
 
 
 if __name__ == '__main__':
