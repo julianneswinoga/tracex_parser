@@ -5,6 +5,7 @@ import argparse
 import copy
 from typing import *
 
+from helpers import TraceXParseException, CStruct
 from events import TraceXEvent, convert_events
 
 parser = argparse.ArgumentParser(description="""
@@ -13,50 +14,6 @@ parser.add_argument('input_trxs', nargs='+', action='store',
                     help='Path to the input trx file(s) that contains TraceX event data')
 parser.add_argument('-v', '--verbose', action='count', default=0,
                     help='Set the verbosity of logging')
-
-
-class CStruct:
-    """
-    Dict-like helper class to help unpack raw binary data into a dictionary
-    """
-    def __init__(self, endian_str: str, fields: List[Tuple[str, str]]):
-        self.data = {}
-        self.endian_str = endian_str
-        self.fields = fields
-
-    def __repr__(self):
-        return str({k: hex(v) if isinstance(v, int) else v
-                    for k, v in self.data.items()
-                    if 'reserved' not in k
-                    })
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
-    def clear(self):
-        self.data = {}
-
-    def total_size(self):
-        size = 0
-        for field in self.fields:
-            size += struct.calcsize(self.endian_str + field[0])
-        return size
-
-    def unpack(self, data: bytes):
-        offset = 0
-        for struct_def, field_name in self.fields:
-            struct_format = self.endian_str + struct_def
-            field_size = struct.calcsize(struct_format)
-            unpacked_data = struct.unpack(struct_format, data[offset:offset + field_size])
-            if len(unpacked_data) == 1:
-                # unpack tuple
-                self.data[field_name] = unpacked_data[0]
-            else:
-                self.data[field_name] = unpacked_data
-            offset += field_size
 
 
 def get_endian_str(buf: bytes) -> Tuple[str, int]:
@@ -74,7 +31,7 @@ def get_endian_str(buf: bytes) -> Tuple[str, int]:
     elif header_id == magic_file_number_little:
         return '<', magic_str_size
     else:
-        raise Exception(f'Invalid magic number: {hex(header_id)}')
+        raise TraceXParseException(f'Invalid magic number: {hex(header_id)}')
 
 
 def get_control_header(endian_str: str, buf: bytes, start_idx: int) -> Tuple[CStruct, int]:
@@ -121,7 +78,7 @@ def get_object_registry(endian_str: str, buf: bytes, start_idx: int, control_hea
 
     obj_reg_addr_range = (control_header['obj_reg_end_pointer'] - control_header['obj_reg_start_pointer'])
     if obj_reg_addr_range % object_size != 0:
-        raise Exception(f'Object registry range does not match object size: {obj_reg_addr_range}, {object_size}')
+        raise TraceXParseException(f'Object registry range does not match object size: {obj_reg_addr_range}, {object_size}')
     num_objects = obj_reg_addr_range // object_size
 
     object_entry_start_idx = start_idx
@@ -166,7 +123,7 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
 
     event_entry_addr_range = (control_header['buf_end_ptr'] - control_header['buf_start_ptr'])
     if event_entry_addr_range % event_size != 0:
-        raise Exception(f'Event entries range does not match event size: {event_entry_addr_range}, {event_size}')
+        raise TraceXParseException(f'Event entries range does not match event size: {event_entry_addr_range}, {event_size}')
     num_entries = event_entry_addr_range // event_size
 
     event_entry_start_idx = start_idx
@@ -239,5 +196,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     from signal import signal, SIGPIPE, SIG_DFL
 
-    signal(SIGPIPE, SIG_DFL)
+    signal(SIGPIPE, SIG_DFL)  # Don't break when piping output
     main()

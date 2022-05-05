@@ -1,5 +1,7 @@
 from typing import *
 
+from helpers import TraceXEventException, CStruct
+
 
 class CommonArg:
     """
@@ -52,10 +54,10 @@ class TraceXEvent:
 
     def _generate_arg_dict(self, arg_names: List[str]) -> Dict[str, Any]:
         if len(self.arg_map) != 4:
-            raise Exception(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
+            raise TraceXEventException(f'{self.__class__.__name__} arg map must have exactly 4 entries: {self.arg_map}')
         return {k: v for k, v in zip(arg_names, self.raw_args)}
 
-    def _map_ptr_to_obj_reg_name(self, obj_reg_map: Dict, key_ptr: int) -> Optional[str]:
+    def _map_ptr_to_obj_reg_name(self, obj_reg_map: Dict[int, CStruct], key_ptr: int) -> Optional[str]:
         if key_ptr in obj_reg_map:
             raw_obj_name = obj_reg_map[key_ptr]['thread_reg_entry_obj_name']
             try:
@@ -66,7 +68,7 @@ class TraceXEvent:
         print(f'Cant find {key_ptr} in objreg')
         return None
 
-    def apply_object_registry(self, obj_reg_map: Dict):
+    def apply_object_registry(self, obj_reg_map: Dict[int, CStruct]):
         # Change mapped arguments to strings if they can be found in the registry
         args_to_map = [CommonArg.obj_id, CommonArg.thread_ptr, CommonArg.next_thread]
         for arg_to_map in args_to_map:
@@ -177,7 +179,7 @@ def convert_event(raw_event, custom_events_map: Optional[Dict] = None) -> TraceX
         return TraceXEvent(*args)
 
 
-def convert_events(raw_events: List, obj_reg_map: Dict,
+def convert_events(raw_events: List, obj_reg_map: Dict[int, CStruct],
                    custom_events_map: Optional[Dict[int, TraceXEvent]] = None) -> List[TraceXEvent]:
     x_events = []
     for raw_event in raw_events:
