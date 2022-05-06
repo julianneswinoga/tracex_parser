@@ -1,6 +1,6 @@
 from typing import *
 
-from helpers import TraceXEventException, CStruct
+from .helpers import TraceXEventException, CStruct
 
 
 class CommonArg:

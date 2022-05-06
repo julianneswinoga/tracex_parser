@@ -5,8 +5,8 @@ import argparse
 import copy
 from typing import *
 
-from helpers import TraceXParseException, CStruct
-from events import TraceXEvent, convert_events
+from .helpers import TraceXParseException, CStruct
+from .events import TraceXEvent, convert_events
 
 parser = argparse.ArgumentParser(description="""
 TraceX parser module, intended as a library but can be used as a standalone script""")
