@@ -56,3 +56,16 @@ class CStruct:
             else:
                 self.data[field_name] = unpacked_data
             offset += field_size
+
+
+class TextColour:
+    def __init__(self, have_colours: bool = True):
+        self.blk = '\u001b[30m' if have_colours else ''
+        self.red = '\u001b[31m' if have_colours else ''
+        self.grn = '\u001b[32m' if have_colours else ''
+        self.yel = '\u001b[33m' if have_colours else ''
+        self.blu = '\u001b[34m' if have_colours else ''
+        self.mag = '\u001b[35m' if have_colours else ''
+        self.cya = '\u001b[36m' if have_colours else ''
+        self.wte = '\u001b[37m' if have_colours else ''
+        self.rst = '\u001b[0m' if have_colours else ''

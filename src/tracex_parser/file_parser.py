@@ -3,9 +3,10 @@
 import struct
 import argparse
 import copy
+import sys
 from typing import *
 
-from .helpers import TraceXParseException, CStruct
+from .helpers import TraceXParseException, CStruct, TextColour
 from .events import TraceXEvent, convert_events
 
 parser = argparse.ArgumentParser(description="""
@@ -14,6 +15,7 @@ parser.add_argument('input_trxs', nargs='+', action='store',
                     help='Path to the input trx file(s) that contains TraceX event data')
 parser.add_argument('-v', '--verbose', action='count', default=0,
                     help='Set the verbosity of logging')
+parser.add_argument('-n', '--nocolor', action='store_true', help='Do not add color to the output')
 
 
 def get_endian_str(buf: bytes) -> Tuple[str, int]:
@@ -177,13 +179,13 @@ def main():
     for input_filepath in args.input_trxs:
         print(f'Parsing {input_filepath}')
         tracex_events, obj_reg_map = parse_tracex_buffer(input_filepath)
-        print(f'total events: {len(tracex_events)}')
-        print(f'object registry size: {len(obj_reg_map.keys())}')
+        print(f'{colour.wte}total events: {len(tracex_events)}{colour.rst}')
+        print(f'{colour.wte}object registry size: {len(obj_reg_map.keys())}{colour.rst}')
         total_ticks = tracex_events[-1].timestamp - tracex_events[0].timestamp
-        print(f'delta ticks: {total_ticks}')
+        print(f'{colour.wte}delta ticks: {total_ticks}{colour.rst}')
 
         if args.verbose > 0:
-            print('Event Histogram:')
+            print(f'{colour.grn}Event Histogram:{colour.rst}')
             events_histogram = {}
             for tracex_event in tracex_events:
                 event_id = tracex_event.fn_name if tracex_event.fn_name else tracex_event.id
@@ -192,17 +194,23 @@ def main():
                 else:
                     events_histogram[event_id] = 1
             for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
-                print(f'{event_id:<20}{events_histogram[event_id]}')
+                event_colour = colour.blu if isinstance(event_id, str) else colour.yel
+                print(f'{event_colour}{event_id:<20}{events_histogram[event_id]}{colour.rst}')
 
         if args.verbose > 1:
-            print('All events:')
+            print(f'{colour.grn}All events:{colour.rst}')
             for tracex_event in tracex_events:
-                print(tracex_event)
+                print(tracex_event.as_str(colour))
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    from signal import signal, SIGPIPE, SIG_DFL
 
-    signal(SIGPIPE, SIG_DFL)  # Don't break when piping output
+    from signal import signal, SIGPIPE, SIG_DFL
+    # Don't break when piping output
+    signal(SIGPIPE, SIG_DFL)
+
+    # set up colours
+    have_colours = sys.stdout.isatty() and not args.nocolor
+    colour = TextColour(have_colours)
     main()

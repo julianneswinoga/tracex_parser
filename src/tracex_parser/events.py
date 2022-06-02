@@ -1,6 +1,6 @@
 from typing import *
 
-from .helpers import TraceXEventException, CStruct
+from .helpers import TraceXEventException, CStruct, TextColour
 
 
 class CommonArg:
@@ -36,7 +36,13 @@ class TraceXEvent:
         self.thread_name: Optional[str] = None
         self.mapped_args: Dict[str, Union[int, str]] = self._generate_arg_dict(self.arg_map)
 
-    def __repr__(self):
+    def as_str(self, txt_colour: Optional[TextColour] = None):
+        # So we don't have to worry about checking if colours are valid
+        if txt_colour is None:
+            colour = TextColour(False)
+        else:
+            colour = txt_colour
+
         thread_str = self.thread_name if self.thread_name is not None else self.thread_ptr
         fn_str = self.fn_name if self.fn_name is not None else f'<TX ID#{self.id}>'
         arg_strs = []
@@ -46,11 +52,17 @@ class TraceXEvent:
                 continue
             if isinstance(arg_val, int):
                 # For this printing always convert raw integers to hex
-                arg_strs.append(f'{arg_name}={hex(arg_val)}')
+                arg_strs.append(f'{arg_name}={colour.wte}{hex(arg_val)}{colour.rst}')
             else:
-                arg_strs.append(f'{arg_name}={arg_val}')
+                arg_strs.append(f'{arg_name}={colour.red}{arg_val}{colour.rst}')
         arg_str = ','.join(arg_strs)
-        return f'{self.timestamp}:{thread_str} {fn_str}({arg_str})'
+
+        return f'{colour.cya}{self.timestamp}{colour.rst}:' \
+               f'{colour.red}{thread_str}{colour.rst} ' \
+               f'{colour.yel}{fn_str}{colour.rst}({arg_str})'
+
+    def __repr__(self):
+        return self.as_str(None)
 
     def _generate_arg_dict(self, arg_names: List[str]) -> Dict[str, Any]:
         if len(self.arg_map) != 4:
