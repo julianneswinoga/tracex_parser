@@ -100,7 +100,7 @@ class TraceXEvent:
             }.get(self.mapped_args[CommonArg.timeout], self.mapped_args[CommonArg.timeout])
 
 
-def tracex_event_factory(class_name: str, fn_name: Optional[str] = True, arg_map: Optional[List] = None,
+def tracex_event_factory(class_name: str, fn_name: Optional[str] = None, arg_map: Optional[List] = None,
                          class_name_is_fn_name: bool = False) -> ClassVar:
     # Create the event classes dynamically
     funct_name = class_name if class_name_is_fn_name else fn_name
