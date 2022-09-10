@@ -1,0 +1,107 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@2.0.3
+
+update-pip-poetry: &update-pip-poetry |-
+  poetry --version
+  pip3 install --upgrade pip
+  # 3.6 support was dropped in 1.2.0
+  pip3 install --upgrade poetry==1.1.15
+  # Don't put more poetry commands here, they'll use the old version for some reason
+
+jobs:
+  build_install_test:
+    parameters:
+      python-version:
+        type: string
+    executor:
+      name: python/default
+      tag: << parameters.python-version >>
+    steps:
+      - checkout
+      - run:
+          name: Update Pip and Poetry
+          command: *update-pip-poetry
+      - run:
+          name: Poetry show version
+          command: poetry --version
+      - run:
+          name: Poetry build
+          command: poetry build --no-ansi --no-interaction
+      - run:
+          name: Poetry install
+          command: poetry install --no-ansi --no-interaction
+      - run:
+          name: Install coverage
+          command: pip install -U coverage coveralls
+      - run:
+          name: Run pytest
+          command: poetry run coverage run -m pytest tests/
+      - run:
+          name: Coveralls
+          command: coveralls
+      - when:
+          condition:
+            equal: [ "3.6", << parameters.python-version >> ]
+          steps:
+            - store_artifacts:
+                path: dist
+            - persist_to_workspace:
+                root: .
+                paths:
+                  - dist
+  poetry_publish:
+    executor:
+      name: python/default
+      tag: "3.6"
+    steps:
+      - checkout
+      - run:
+          name: Update Pip and Poetry
+          command: *update-pip-poetry
+      - run:
+          name: Poetry show version
+          command: poetry --version
+      - attach_workspace:
+          at: .
+      - run:
+          name: Poetry publish
+          command: poetry publish -vv --no-ansi --no-interaction --username __token__ --password ${TRACEX_PYPI_TOKEN}
+  github_publish:
+    docker:
+      - image: cibuilds/github:0.13.0
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Publish GitHub release
+          command: |
+            VERSION=$(echo ./dist/*.whl | cut -d- -f2)
+            ghr -token ${GITHUB_PAT} -username ${CIRCLE_PROJECT_USERNAME} -repository ${CIRCLE_PROJECT_REPONAME} -commitish ${CIRCLE_SHA1} -parallel 1 -b "Automatic release ${VERSION}" ${VERSION} ./dist
+
+tag-filter: &tag-filter
+  filters:
+    tags:
+      only: /^\d+\.\d+\.\d+$/
+    branches:
+      ignore: /.*/
+
+workflows:
+  main-workflow:
+    jobs:
+      - build_install_test:
+          matrix:
+            parameters:
+              python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+          filters:  # required since `deploy` has tag filters AND requires `build`
+            tags:
+              only: /.*/
+      - poetry_publish:
+          requires:
+            - build_install_test
+          <<: *tag-filter
+      - github_publish:
+          requires:
+            - build_install_test
+          <<: *tag-filter
