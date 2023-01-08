@@ -7,6 +7,10 @@ TODO
     :caption: Table of Contents
 
     Welcome <self>
+    quickstart
+    cli-interface
+    py-interface
+    examples
     changelog_link
 
 API
