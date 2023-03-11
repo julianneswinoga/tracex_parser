@@ -15,7 +15,8 @@ parser.add_argument('input_trxs', nargs='+', action='store',
                     help='Path to the input trx file(s) that contains TraceX event data')
 parser.add_argument('-v', '--verbose', action='count', default=0,
                     help='Set the verbosity of logging')
-parser.add_argument('-n', '--nocolor', action='store_true', help='Do not add color to the output')
+parser.add_argument('-n', '--nocolor', action='store_true', help='Never color the output')
+parser.add_argument('-c', '--color', action='store_true', help='Always color the output')
 
 
 def get_endian_str(buf: bytes) -> Tuple[str, int]:
@@ -211,6 +212,18 @@ if __name__ == '__main__':
     signal(SIGPIPE, SIG_DFL)
 
     # set up colours
-    have_colours = sys.stdout.isatty() and not args.nocolor
+    # Truth table for what we want.
+    # Precedence is: color, nocolor, tty
+    # tty | nocolor | color | output
+    # ==============================
+    #  0  |    0    |   0   |   0
+    #  0  |    0    |   1   |   1
+    #  0  |    1    |   0   |   1
+    #  0  |    1    |   1   |   1
+    #  1  |    0    |   0   |   1
+    #  1  |    0    |   1   |   1
+    #  1  |    1    |   0   |   0
+    #  1  |    1    |   1   |   1
+    have_colours = (sys.stdout.isatty() and not args.nocolor) or args.color
     colour = TextColour(have_colours)
     main()
