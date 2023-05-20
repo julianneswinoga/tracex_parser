@@ -8,6 +8,8 @@ update-pip-poetry: &update-pip-poetry |-
   pip3 install --upgrade pip
   # 3.6 support was dropped in 1.2.0
   pip3 install --upgrade poetry==1.1.15
+  # Work around broken urllib3 dependency from poetry 1.1.15
+  pip3 install --upgrade urllib3==1.26.12
   # Don't put more poetry commands here, they'll use the old version for some reason
 
 jobs:
