@@ -144,6 +144,18 @@ event_id_map = {
                             ['_1', '_2', '_3', '_4']),  # No args that we care about
     10: tracex_event_factory('BlockAllocateEvent', 'blockAlloc',
                              ['pool_ptr', 'mem_ptr', CommonArg.timeout, 'rem_blocks']),
+    11: tracex_event_factory('BlockPoolCreate', 'blockPoolCreate',
+                             ['pool_ptr', 'pool_start', 'total_blocks', 'block_size']),
+    12: tracex_event_factory('BlockPoolDelete', 'blockPoolDel',
+                             ['pool_ptr', CommonArg.stack_ptr, '_3', '_4']),
+    13: tracex_event_factory('BlockPoolInfo', 'blockPoolInfo',
+                             ['pool_ptr', '_2', '_3', '_4']),
+    14: tracex_event_factory('BlockPoolPerformanceInfo', 'blockPoolPerfInfo',
+                             ['pool_ptr', '_2', '_3', '_4']),
+    15: tracex_event_factory('BlockPoolPerformanceSystemInfo', 'blockPoolPerfSysInfo',
+                             ['_1', '_2', '_3', '_4']),  # No args that we care about
+    16: tracex_event_factory('BlockPoolPrioritize', 'blockPoolPrioritize',
+                             ['pool_ptr', 'suspend_cnt', CommonArg.stack_ptr, '_4']),
     17: tracex_event_factory('BlockReleaseEvent', 'blockRelease',
                              ['pool_ptr', 'mem_ptr', 'suspended', CommonArg.stack_ptr]),
     27: tracex_event_factory('ByteReleaseEvent', 'byteRelease',
