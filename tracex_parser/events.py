@@ -10,6 +10,7 @@ class CommonArg:
     """
     stack_ptr = 'stack_ptr'
     queue_ptr = 'queue_ptr'
+    pool_ptr = 'pool_ptr'
     timeout = 'timeout'
     # The following will attempted to be looked up in the object registry and mapped to strings
     obj_id = 'obj_id'
@@ -143,23 +144,23 @@ event_id_map = {
     6: tracex_event_factory('RunningEvent', 'running',
                             ['_1', '_2', '_3', '_4']),  # No args that we care about
     10: tracex_event_factory('BlockAllocateEvent', 'blockAlloc',
-                             ['pool_ptr', 'mem_ptr', CommonArg.timeout, 'rem_blocks']),
+                             [CommonArg.pool_ptr, 'mem_ptr', CommonArg.timeout, 'rem_blocks']),
     11: tracex_event_factory('BlockPoolCreate', 'blockPoolCreate',
-                             ['pool_ptr', 'pool_start', 'total_blocks', 'block_size']),
+                             [CommonArg.pool_ptr, 'pool_start', 'total_blocks', 'block_size']),
     12: tracex_event_factory('BlockPoolDelete', 'blockPoolDel',
-                             ['pool_ptr', CommonArg.stack_ptr, '_3', '_4']),
+                             [CommonArg.pool_ptr, CommonArg.stack_ptr, '_3', '_4']),
     13: tracex_event_factory('BlockPoolInfo', 'blockPoolInfo',
-                             ['pool_ptr', '_2', '_3', '_4']),
+                             [CommonArg.pool_ptr, '_2', '_3', '_4']),
     14: tracex_event_factory('BlockPoolPerformanceInfo', 'blockPoolPerfInfo',
-                             ['pool_ptr', '_2', '_3', '_4']),
+                             [CommonArg.pool_ptr, '_2', '_3', '_4']),
     15: tracex_event_factory('BlockPoolPerformanceSystemInfo', 'blockPoolPerfSysInfo',
                              ['_1', '_2', '_3', '_4']),  # No args that we care about
     16: tracex_event_factory('BlockPoolPrioritize', 'blockPoolPrioritize',
-                             ['pool_ptr', 'suspend_cnt', CommonArg.stack_ptr, '_4']),
+                             [CommonArg.pool_ptr, 'suspend_cnt', CommonArg.stack_ptr, '_4']),
     17: tracex_event_factory('BlockReleaseEvent', 'blockRelease',
-                             ['pool_ptr', 'mem_ptr', 'suspended', CommonArg.stack_ptr]),
+                             [CommonArg.pool_ptr, 'mem_ptr', 'suspended', CommonArg.stack_ptr]),
     27: tracex_event_factory('ByteReleaseEvent', 'byteRelease',
-                             ['pool_ptr', 'mem_ptr', 'suspended', 'avail_bytes']),
+                             [CommonArg.pool_ptr, 'mem_ptr', 'suspended', 'avail_bytes']),
     32: tracex_event_factory('FlagsGetEvent', 'flagsGet',
                              ['group_ptr', 'req_flags', 'cur_flags', 'get_opt']),
     36: tracex_event_factory('FlagsSetEvent', 'flagsSet',
