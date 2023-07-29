@@ -200,14 +200,16 @@ def main():
             print(f'{colour.grn}Event Histogram:{colour.rst}')
             events_histogram = {}
             for tracex_event in tracex_events:
-                event_id = tracex_event.fn_name if tracex_event.fn_name else tracex_event.id
+                event_id = tracex_event.fn_name if tracex_event.fn_name else str(tracex_event.id)
                 if event_id in events_histogram:
                     events_histogram[event_id] += 1
                 else:
                     events_histogram[event_id] = 1
-            for event_id in sorted(events_histogram, key=lambda k: events_histogram[k], reverse=True):
+            sorted_event_names = sorted(events_histogram.keys(), key=lambda k: events_histogram[k], reverse=True)
+            max_event_name_len = max(len(e_id) for e_id in sorted_event_names)
+            for event_id in sorted_event_names:
                 event_colour = colour.blu if isinstance(event_id, str) else colour.yel
-                print(f'{event_colour}{event_id:<20}{events_histogram[event_id]}{colour.rst}')
+                print(f'{event_colour}{event_id:<{max_event_name_len + 1}}{events_histogram[event_id]}{colour.rst}')
 
         if args.verbose > 1:
             print(f'{colour.grn}All events:{colour.rst}')
