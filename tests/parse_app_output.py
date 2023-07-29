@@ -63,8 +63,8 @@ def parse_events_txt(lines: List[str]) -> List[AppEvent]:
         event_str_split = [e.strip() for e in event_str.split('    ') if e]
         event_str_split = list(filter(lambda s: s != '(', event_str_split))
         if event_str_split[4].lower() == 'interrupt':
-            cur_context = ['INTERRUPT', '0']
-            next_context = ['INTERRUPT', '0']
+            cur_context = ['INTERRUPT', 'FFFFFFFF']
+            next_context = ['INTERRUPT', 'FFFFFFFF']
         else:
             cur_context = event_str_split[4].replace('(', '').replace(')', '').rsplit(maxsplit=1)
             next_context = event_str_split[6].replace('(', '').replace(')', '').rsplit(maxsplit=1)
