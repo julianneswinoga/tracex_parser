@@ -139,6 +139,10 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
         event_entry.clear()
         object_entry_end_idx = event_entry_start_idx + event_size
         event_entry.unpack(buf[event_entry_start_idx:object_entry_end_idx])
+
+        # Apply the timer valid mask to the timestamp
+        event_entry['time_stamp'] = control_header['timer_valid_mask'] & event_entry['time_stamp']
+
         if event_entry['event_id'] != 0:
             raw_events.append(copy.deepcopy(event_entry))
         event_entry_start_idx += event_size

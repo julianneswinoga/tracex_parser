@@ -15,7 +15,7 @@ def test_demo_trx_files():
         'demo_filex.trx': TrxDemoStats(950, 949000, 7, 25),
         'demo_netx_tcp.trx': TrxDemoStats(950, 949000, 19, 36),
         'demo_netx_udp.trx': TrxDemoStats(950, 949000, 17, 23),
-        'demo_threadx.trx': TrxDemoStats(974, 156206, 16, 11),
+        'demo_threadx.trx': TrxDemoStats(974, 65520, 16, 11),
     }
 
     for trx_filename, tested_stats in demo_stats.items():
