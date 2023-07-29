@@ -1,3 +1,14 @@
+#### [2.3.0](https://github.com/julianneswinoga/tracex_parser/compare/2.2.0...2.3.0)
+
+> 29 July 2023
+
+- Fix event sorting (it's not by timestamp :/) [`551a05b`](https://github.com/julianneswinoga/tracex_parser/commit/551a05b7f447498f2c455146efc8bf6e08ddce77)
+- Mask time stamp with timer valid mask [`03284a8`](https://github.com/julianneswinoga/tracex_parser/commit/03284a88e5d311d54d8410a7be89ba685b5e2e94)
+- Add tests comparing Microsoft Store app output to our own parsing
+- Add Initialization state to thread name conversion [`715b9d4`](https://github.com/julianneswinoga/tracex_parser/commit/715b9d48640fcd3fda6adf9ba1da72f32339c5b3)
+- Change typing star import to explicit imports [`9f1c4c8`](https://github.com/julianneswinoga/tracex_parser/commit/9f1c4c86aef95ce78d8dc46d837763892eba571d)
+- Generalize histogram string padding [`c4bfb5a`](https://github.com/julianneswinoga/tracex_parser/commit/c4bfb5a6f83f7eb5dc716b4df6ae58a7aae66f3c)
+
 #### [2.2.0](https://github.com/julianneswinoga/tracex_parser/compare/2.1.0...2.2.0)
 
 > 20 May 2023
