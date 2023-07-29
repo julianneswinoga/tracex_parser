@@ -1,4 +1,4 @@
-from typing import *
+from typing import Optional, Dict, List, Union, Any, ClassVar
 
 from .helpers import TraceXEventException, CStruct, TextColour
 

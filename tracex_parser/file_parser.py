@@ -4,7 +4,7 @@ import struct
 import argparse
 import copy
 import sys
-from typing import *
+from typing import Tuple, Optional, Dict, List
 
 from .helpers import TraceXParseException, CStruct, TextColour
 from .events import TraceXEvent, convert_events

@@ -1,5 +1,5 @@
 import struct
-from typing import *
+from typing import Tuple, List
 
 
 class TraceXBaseException(Exception):

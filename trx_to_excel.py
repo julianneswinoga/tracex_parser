@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
-from typing import *
+from typing import Tuple, Optional, Dict, List, Union
 
 import xlsxwriter
 from colorhash import ColorHash
