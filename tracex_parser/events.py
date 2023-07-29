@@ -93,9 +93,11 @@ class TraceXEvent:
                     print(f'Failed to map {arg_to_map} in {self.__class__.__name__}:{self.mapped_args}')
 
         # Make the thread names nicer
+        # @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#thread-pointer
         if self.thread_ptr == 0xFFFFFFFF:
-            # @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#thread-pointer
             self.thread_name = 'INTERRUPT'
+        elif self.thread_ptr == 0xF0F0F0F0:
+            self.thread_name = 'INITIALIZATION'
         else:
             # Try to find time slice thread_ptr in the registry
             obj_reg_name = self._map_ptr_to_obj_reg_name(obj_reg_map, self.thread_ptr)
