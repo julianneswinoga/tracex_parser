@@ -5,6 +5,7 @@ import argparse
 import copy
 import sys
 from typing import Tuple, Optional, Dict, List
+from collections import deque
 
 from .helpers import TraceXParseException, CStruct, TextColour
 from .events import TraceXEvent, convert_events
@@ -113,7 +114,7 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
     """
     @see https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter11#event-trace-entries
     Unpacks the TraceX events into a list of dict-like CStructs.
-    Events are sorted by their timestamp.
+    Events are sorted by their place in the buffer.
     """
     event_entry = CStruct(endian_str, [
         ('L', 'thread_ptr'),
@@ -146,8 +147,14 @@ def get_event_entries(endian_str: str, buf: bytes, start_idx: int, control_heade
         if event_entry['event_id'] != 0:
             raw_events.append(copy.deepcopy(event_entry))
         event_entry_start_idx += event_size
-    raw_events.sort(key=lambda t: t['time_stamp'])
-    return raw_events, event_entry_start_idx
+
+    # Even though we have a timestamp, events are ordered in the way they were placed in the buffer
+    oldest_event_idx = (control_header['buf_end_ptr'] - control_header['buf_cur_ptr']) // event_size
+    raw_events_deque = deque(raw_events)
+    raw_events_deque.rotate(oldest_event_idx)
+    raw_events_sorted = list(raw_events_deque)
+
+    return raw_events_sorted, event_entry_start_idx
 
 
 def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, TraceXEvent]] = None) \
