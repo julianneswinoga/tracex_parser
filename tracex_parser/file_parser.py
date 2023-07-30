@@ -221,6 +221,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     from signal import signal, SIGPIPE, SIG_DFL
+
     # Don't break when piping output
     signal(SIGPIPE, SIG_DFL)
 
