@@ -1,3 +1,12 @@
+#### [2.4.0](https://github.com/julianneswinoga/tracex_parser/compare/2.3.0...2.4.0)
+
+> 12 September 2023
+
+- Add `parse-trx` as an installed script, needed to massage `file_parser.py`'s main function to do this [`e5b10dc`](https://github.com/julianneswinoga/tracex_parser/commit/e5b10dc88e3b25a02fafda566132954caf37bfb0)
+- Add the rest of the app-parsed text files, and an exception for demo_netx_udp.txt... [`a3b209e`](https://github.com/julianneswinoga/tracex_parser/commit/a3b209e101905a4b0acb5035baf83c736c9e29d8)
+- Convert raw test loop into pytest parameters [`e6b1e56`](https://github.com/julianneswinoga/tracex_parser/commit/e6b1e5627a811325ea87fc4e2a2a45a0acbec2dd)
+- Update README.md script output after previous changes/bugfixes [`b5fc5ee`](https://github.com/julianneswinoga/tracex_parser/commit/b5fc5ee37593753dcc7cd2e8221e1e3e42d68ba5)
+
 #### [2.3.0](https://github.com/julianneswinoga/tracex_parser/compare/2.2.0...2.3.0)
 
 > 29 July 2023
