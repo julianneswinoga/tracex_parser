@@ -188,6 +188,28 @@ def parse_tracex_buffer(filepath: str, custom_events_map: Optional[Dict[int, Tra
 
 
 def main():
+    args = parser.parse_args()
+
+    from signal import signal, SIGPIPE, SIG_DFL
+    # Don't break when piping output
+    signal(SIGPIPE, SIG_DFL)
+
+    # set up colours
+    # Truth table for what we want.
+    # Precedence is: color, nocolor, tty
+    # tty | nocolor | color | output
+    # ==============================
+    #  0  |    0    |   0   |   0
+    #  0  |    0    |   1   |   1
+    #  0  |    1    |   0   |   1
+    #  0  |    1    |   1   |   1
+    #  1  |    0    |   0   |   1
+    #  1  |    0    |   1   |   1
+    #  1  |    1    |   0   |   0
+    #  1  |    1    |   1   |   1
+    have_colours = (sys.stdout.isatty() and not args.nocolor) or args.color
+    colour = TextColour(have_colours)
+
     for input_filepath in args.input_trxs:
         print(f'Parsing {input_filepath}')
         tracex_events, obj_reg_map = parse_tracex_buffer(input_filepath)
@@ -218,26 +240,4 @@ def main():
 
 
 if __name__ == '__main__':
-    args = parser.parse_args()
-
-    from signal import signal, SIGPIPE, SIG_DFL
-
-    # Don't break when piping output
-    signal(SIGPIPE, SIG_DFL)
-
-    # set up colours
-    # Truth table for what we want.
-    # Precedence is: color, nocolor, tty
-    # tty | nocolor | color | output
-    # ==============================
-    #  0  |    0    |   0   |   0
-    #  0  |    0    |   1   |   1
-    #  0  |    1    |   0   |   1
-    #  0  |    1    |   1   |   1
-    #  1  |    0    |   0   |   1
-    #  1  |    0    |   1   |   1
-    #  1  |    1    |   0   |   0
-    #  1  |    1    |   1   |   1
-    have_colours = (sys.stdout.isatty() and not args.nocolor) or args.color
-    colour = TextColour(have_colours)
     main()

@@ -27,9 +27,14 @@ In the repository source there are a couple example TraceX traces which can be u
 
 ### As a command line utility
 [documentation](https://tracex-parser.readthedocs.io/en/latest/cli-interface.html)
-The `file_parser` module can also be run as a script, which will provide simple statistics on the trace as well as dumping all the events in the trace:
+The `file_parser` module can also be run as a script, which will provide simple statistics on the trace as well as dumping all the events in the trace.
+It can be run by either:
+- Running the module manually: `python3 -m tracex_parser.file_parser`
+- Using the newly installed command: `parse-trx`
+
+Both run methods are identical.
 ```console
-$ python3 -m tracex_parser.file_parser -vvv ./demo_threadx.trx
+$ parse-trx -vvv ./demo_threadx.trx
 Parsing ./demo_threadx.trx
 total events: 974
 object registry size: 16

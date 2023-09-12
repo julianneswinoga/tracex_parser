@@ -13,6 +13,9 @@ include = [
     '*.trx',
 ]
 
+[tool.poetry.scripts]
+parse-trx = "tracex_parser.file_parser:main"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 
