@@ -33,23 +33,23 @@ $ python3 -m tracex_parser.file_parser -vvv ./demo_threadx.trx
 Parsing ./demo_threadx.trx
 total events: 974
 object registry size: 16
-delta ticks: 156206
+delta ticks: 40402
 Event Histogram:
-queueSend           493
-queueReceive        428
-threadResume        19
-threadSuspend       16
-mtxPut              4
-isrExit             3
-isrEnter            3
-semGet              2
-semPut              2
-threadSleep         2
-mtxGet              2
+queueSend     493
+queueReceive  428
+threadResume  19
+threadSuspend 16
+mtxPut        4
+isrEnter      3
+isrExit       3
+semPut        2
+semGet        2
+mtxGet        2
+threadSleep   2
 All events:
-4265846278:thread 7 threadResume(thread_ptr=thread 6,prev_state=0xd,stack_ptr=0x12980,next_thread=)
-4265846441:thread 7 mtxPut(obj_id=mutex 0,owning_thread=0x6adc,own_cnt=0x1,stack_ptr=0x129a0)
-4265846566:thread 7 mtxPut(obj_id=mutex 0,owning_thread=0x6adc,own_cnt=0x2,stack_ptr=0x129a0)
-4265846825:thread 4 threadSuspend(thread_ptr=thread 4,new_state=0x6,stack_ptr=0x11d70,next_thread=thread 7)
-4265846953:thread 4 semGet(obj_id=semaphore 0,timeout=WaitForever,cur_cnt=0x0,stack_ptr=0x11d98)
+2100:thread 2 queueReceive(queue_ptr=0x6b84,dst_ptr=0x115a0,timeout=WaitForever,enqueued=0x13)
+1939:thread 2 queueReceive(queue_ptr=0x6b84,dst_ptr=0x115a0,timeout=WaitForever,enqueued=0x12)
+1778:thread 2 queueReceive(queue_ptr=0x6b84,dst_ptr=0x115a0,timeout=WaitForever,enqueued=0x11)
+1617:thread 2 queueReceive(queue_ptr=0x6b84,dst_ptr=0x115a0,timeout=WaitForever,enqueued=0x10)
+1456:thread 2 queueReceive(queue_ptr=0x6b84,dst_ptr=0x115a0,timeout=WaitForever,enqueued=0xf)
 ...
