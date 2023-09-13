@@ -9,7 +9,7 @@ description = "Parser for ThreadX RTOS's trace buffers (aka TraceX)"
 authors = ["Julianne Swinoga <julianneswinoga@gmail.com>"]
 readme = "README.md"
 license = "MIT"
-include = [
+exclude = [
     '*.trx',
 ]
 
