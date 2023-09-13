@@ -1,3 +1,10 @@
+#### [2.4.1](https://github.com/julianneswinoga/tracex_parser/compare/2.4.0...2.4.1)
+
+> 13 September 2023
+
+- Update CLI docs [`c0e852f`](https://github.com/julianneswinoga/tracex_parser/commit/c0e852f37036a97d7f4dd633db69d2d4a75f12c3)
+- Exclude .trx demo files from package build [`bec46ce`](https://github.com/julianneswinoga/tracex_parser/commit/bec46cef5865a4ba7b929be84a507119e5038768)
+
 #### [2.4.0](https://github.com/julianneswinoga/tracex_parser/compare/2.3.0...2.4.0)
 
 > 12 September 2023
