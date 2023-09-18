@@ -10,7 +10,25 @@ Don't know where to begin? Check out the [quick-start](https://tracex-parser.rea
 More documentation about ThreadX trace buffers can be found [here](https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter5).
 
 ## Install
-`pip3 install tracex-parser`
+### Via `pip`
+```console
+$ python3 -m pip install tracex-parser
+```
+
+### Via `snap`
+> [!NOTE]
+> This installation method only allows you to use the command line file parser, not the Python library
+
+```console
+$ snap install --classic tracex-parser
+$ sudo snap alias tracex-parser.parse-trx parse-trx  # Register the `parse-trx` command, otherwise you will need to use tracex-parser.parse-trx
+$ snap connect tracex-parser:readonly-system-access  # Required to allow reading of files
+```
+
+> [!NOTE]
+> There are some restrictions on which files snaps are allowed to access. Currently,
+> only `/home` and `/media` are able to be read. `/tmp` for example will throw a `No such file or directory` error
+
 
 ## Example trace buffers
 In the repository source there are a couple example TraceX traces which can be used to verify that things are working correctly.
