@@ -1,3 +1,9 @@
+#### [2.4.2](https://github.com/julianneswinoga/tracex_parser/compare/2.4.1...2.4.2)
+
+> 29 September 2023
+
+- Js/add snap build [`#1`](https://github.com/julianneswinoga/tracex_parser/pull/1)
+
 #### [2.4.1](https://github.com/julianneswinoga/tracex_parser/compare/2.4.0...2.4.1)
 
 > 13 September 2023
