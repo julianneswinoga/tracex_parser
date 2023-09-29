@@ -9,7 +9,6 @@ website: https://github.com/julianneswinoga/tracex_parser
 source-code: https://github.com/julianneswinoga/tracex_parser
 
 grade: stable
-#confinement: classic
 confinement: strict
 
 parts:
@@ -18,27 +17,15 @@ parts:
     source: .
     python-packages:
       - poetry
-#    stage-packages:  # only for classic
-#      - python3.10-minimal
     override-build: |
       craftctl default
       poetry build --no-ansi --no-interaction
       VERSION=$(echo ./dist/*.whl | cut -d- -f2)
       craftctl set version=${VERSION}
 
-plugs:
-  readonly-system-access:
-    interface: system-files
-    read:
-      - /home
-      - /media
-      # - /tmp  # Doesn't work...
-      # - /opt  # Doesn't work...
-
 apps:
   parse-trx:
-    # strict confinement is too restrictive - there is no way to allow any file access to the host /tmp directory:
-    # https://forum.snapcraft.io/t/accessing-tmp-from-snaps/22384
     plugs:
-      - readonly-system-access
+      - home
+      - removable-media
     command: /bin/python3 -m tracex_parser.file_parser

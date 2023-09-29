@@ -20,14 +20,15 @@ $ python3 -m pip install tracex-parser
 > This installation method only allows you to use the command line file parser, not the Python library
 
 ```console
-$ snap install --classic tracex-parser
+$ snap install tracex-parser
 $ sudo snap alias tracex-parser.parse-trx parse-trx  # Register the `parse-trx` command, otherwise you will need to use tracex-parser.parse-trx
-$ snap connect tracex-parser:readonly-system-access  # Required to allow reading of files
+$ sudo snap connect tracex-parser:removable-media  # Required to allow reading of files outside of /home
 ```
 
 > [!NOTE]
-> There are some restrictions on which files snaps are allowed to access. Currently,
-> only `/home` and `/media` are able to be read. `/tmp` for example will throw a `No such file or directory` error
+> Due to how snap packages work, there are restrictions on which files snaps are allowed to access.
+> Currently only `/home`, `/media`, `/run/media`, `/mnt` are able to be read.
+> For example attempting to read a file in `/tmp` will throw a `No such file or directory` error
 
 
 ## Example trace buffers
