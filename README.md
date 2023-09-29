@@ -20,7 +20,7 @@ $ python3 -m pip install tracex-parser
 > This installation method only allows you to use the command line file parser, not the Python library
 
 ```console
-$ snap install tracex-parser
+$ sudo snap install tracex-parser
 $ sudo snap alias tracex-parser.parse-trx parse-trx  # Register the `parse-trx` command, otherwise you will need to use tracex-parser.parse-trx
 $ sudo snap connect tracex-parser:removable-media  # Required to allow reading of files outside of /home
 ```
