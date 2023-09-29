@@ -15,15 +15,16 @@ parts:
   tracex-parser:
     plugin: python
     source: .
-    python-packages:
-      - poetry
     override-build: |
       craftctl default
       git clean -d --force --force -x
-      poetry build --no-ansi --no-interaction
+      python3 -m venv .venv
+      
+      ./.venv/bin/python3 -m pip install poetry
+      ./.venv/bin/poetry build --no-ansi --no-interaction
+      
       python3 -m pip install ./dist/tracex_parser-*.whl
-      VERSION=$(echo ./dist/*.whl | cut -d- -f2)
-      craftctl set version=${VERSION}
+      craftctl set version=$(echo ./dist/*.whl | cut -d- -f2)
 
 apps:
   parse-trx:
