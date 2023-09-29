@@ -1,0 +1,33 @@
+name: tracex-parser
+base: core22
+adopt-info: tracex-parser
+summary: Parse ThreadX trace buffers into both human and machine-readable formats
+description: |
+  This is a python package that parses ThreadX trace buffers into both
+  human and machine-readable formats.
+website: https://github.com/julianneswinoga/tracex_parser
+source-code: https://github.com/julianneswinoga/tracex_parser
+
+grade: stable
+confinement: strict
+
+parts:
+  tracex-parser:
+    plugin: python
+    source: .
+    python-packages:
+      - poetry
+    override-build: |
+      craftctl default
+      git clean -d --force --force -x
+      poetry build --no-ansi --no-interaction
+      python3 -m pip install ./dist/tracex_parser-*.whl
+      VERSION=$(echo ./dist/*.whl | cut -d- -f2)
+      craftctl set version=${VERSION}
+
+apps:
+  parse-trx:
+    plugs:
+      - home
+      - removable-media
+    command: bin/python3 -m tracex_parser.file_parser
