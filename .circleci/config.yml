@@ -117,6 +117,25 @@ jobs:
           command: |
             VERSION=$(echo ./dist/*.whl | cut -d- -f2)
             ghr -token ${GITHUB_PAT} -username ${CIRCLE_PROJECT_USERNAME} -repository ${CIRCLE_PROJECT_REPONAME} -commitish ${CIRCLE_SHA1} -parallel 1 -b "Automatic release ${VERSION}" ${VERSION} ./dist
+  snap_publish:
+    machine:
+      image: ubuntu-2204:2023.07.2  # https://circleci.com/developer/machine/image/ubuntu-2204
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: apt update
+          command: sudo apt update
+      - run:
+          name: Install snapd
+          command: sudo apt install snapd
+      - run:
+          name: Install Snapcraft
+          command: sudo snap install snapcraft --classic
+      - run:
+          name: Snapcraft Upload
+          # Requires SNAPCRAFT_STORE_CREDENTIALS
+          command: snapcraft upload --verbose --release=stable ./snap_dist/*.snap
 
 tag-filter: &tag-filter
   filters:
@@ -145,6 +164,11 @@ workflows:
             - snap_build
           <<: *tag-filter
       - github_publish:
+          requires:
+            - build_install_test
+            - snap_build
+          <<: *tag-filter
+      - snap_publish:
           requires:
             - build_install_test
             - snap_build
