@@ -1,3 +1,9 @@
+#### [2.4.3](https://github.com/julianneswinoga/tracex_parser/compare/2.4.2...2.4.3)
+
+> 29 September 2023
+
+- Made snap build much smaller [`0e2282e`](https://github.com/julianneswinoga/tracex_parser/commit/0e2282e803d4af2ff849e149a357cbd497320c65)
+
 #### [2.4.2](https://github.com/julianneswinoga/tracex_parser/compare/2.4.1...2.4.2)
 
 > 29 September 2023
