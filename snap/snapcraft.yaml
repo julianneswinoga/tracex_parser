@@ -11,6 +11,10 @@ source-code: https://github.com/julianneswinoga/tracex_parser
 grade: stable
 confinement: strict
 
+architectures:
+  - build-on: [amd64]
+    build-for: [all]
+
 parts:
   tracex-parser:
     plugin: python
