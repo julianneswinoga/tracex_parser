@@ -1,3 +1,9 @@
+#### [2.4.4](https://github.com/julianneswinoga/tracex_parser/compare/2.4.3...2.4.4)
+
+> 3 October 2023
+
+- Build snap for all architectures [`187b52c`](https://github.com/julianneswinoga/tracex_parser/commit/187b52c9eaba47257ffd1c2c560e8d933129de4d)
+
 #### [2.4.3](https://github.com/julianneswinoga/tracex_parser/compare/2.4.2...2.4.3)
 
 > 29 September 2023
