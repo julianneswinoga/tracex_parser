@@ -1,9 +1,9 @@
 # TraceX Parser
-[![Documentation Status](https://readthedocs.org/projects/tracex_parser/badge/?version=latest)](https://tracex_parser.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/tracex_parser/badge/?version=latest)](https://tracex-parser.readthedocs.io/en/latest/?badge=latest)
 [![CircleCI](https://circleci.com/gh/julianneswinoga/tracex_parser.svg?style=shield)](https://circleci.com/gh/julianneswinoga/tracex_parser)
 [![Coverage Status](https://coveralls.io/repos/github/julianneswinoga/tracex_parser/badge.svg?branch=master)](https://coveralls.io/github/julianneswinoga/tracex_parser?branch=master)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/tracex_parser)](https://pypi.org/project/tracex_parser/)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/tracex_parser)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/tracex_parser)](https://pypistats.org/packages/tracex_parser)
 
 This python package parses ThreadX trace buffers into both human and machine-readable formats.
 Don't know where to begin? Check out the [quick-start](https://tracex-parser.readthedocs.io/en/latest/quickstart.html) documentation.
