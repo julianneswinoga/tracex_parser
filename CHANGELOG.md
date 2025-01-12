@@ -1,3 +1,13 @@
+### [3.0.0](https://github.com/julianneswinoga/tracex_parser/compare/2.4.4...3.0.0)
+
+> 12 January 2025
+
+- Drop 3.6 support (3.8 minimum), enable 3.11, 3.12, 3.13 support [`#4`](https://github.com/julianneswinoga/tracex_parser/pull/4)
+  - Drop support for 3.6. 3.8 minimum now. Update dependencies, CI [`ca86b18`](https://github.com/julianneswinoga/tracex_parser/commit/ca86b18c85943007f722283cf2b830e11a539254)
+  - Update `do_release.py` [`e2ed4eb`](https://github.com/julianneswinoga/tracex_parser/commit/e2ed4eb39f93f1b644b8553caa83717e0066654a)
+  - Update `run_tests.sh` script [`a004556`](https://github.com/julianneswinoga/tracex_parser/commit/a004556ff32ef7950b0c38c9985ecc81509e5479)
+  - Add pypistats link to `README.md`, fix broken docs link [`7bdbca3`](https://github.com/julianneswinoga/tracex_parser/commit/7bdbca3d98d16ceea03e0f4d7abab375d56a43cf)
+
 #### [2.4.4](https://github.com/julianneswinoga/tracex_parser/compare/2.4.3...2.4.4)
 
 > 3 October 2023
