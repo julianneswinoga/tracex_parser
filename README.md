@@ -7,7 +7,7 @@
 
 This python package parses ThreadX trace buffers into both human and machine-readable formats.
 Don't know where to begin? Check out the [quick-start](https://tracex-parser.readthedocs.io/en/latest/quickstart.html) documentation.
-More documentation about ThreadX trace buffers can be found [here](https://docs.microsoft.com/en-us/azure/rtos/tracex/chapter5).
+More documentation about ThreadX trace buffers can be found [here](https://github.com/eclipse-threadx/rtos-docs/blob/main/rtos-docs/tracex/chapter5.md).
 
 ## Install
 ### Via `pip`
