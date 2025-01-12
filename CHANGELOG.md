@@ -1,3 +1,10 @@
+#### [3.0.1](https://github.com/julianneswinoga/tracex_parser/compare/3.0.0...3.0.1)
+
+> 12 January 2025
+
+- Fix snap_publish CI image tag [`cf9fb67`](https://github.com/julianneswinoga/tracex_parser/commit/cf9fb67d7b5d20e7394eaa2f6f1134ba4940a86d)
+- Fix TraceX documentation link [`438b39a`](https://github.com/julianneswinoga/tracex_parser/commit/438b39a2a2525f0fcf9fdf70b21879e521b492bf)
+
 ### [3.0.0](https://github.com/julianneswinoga/tracex_parser/compare/2.4.4...3.0.0)
 
 > 12 January 2025
