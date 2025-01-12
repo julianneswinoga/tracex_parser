@@ -117,7 +117,9 @@ jobs:
             ghr -token ${GITHUB_PAT} -username ${CIRCLE_PROJECT_USERNAME} -repository ${CIRCLE_PROJECT_REPONAME} -commitish ${CIRCLE_SHA1} -parallel 1 -b "Automatic release ${VERSION}" ${VERSION} ./dist
   snap_publish:
     machine:
-      image: ubuntu-2204:2023.07.2  # https://circleci.com/developer/machine/image/ubuntu-2204
+      # https://circleci.com/developer/machine/image/ubuntu-2204
+      # Sometimes they just delete machine tags?? So just use current
+      image: ubuntu-2204:current
     steps:
       - attach_workspace:
           at: .
