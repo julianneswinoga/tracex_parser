@@ -6,10 +6,8 @@ orbs:
 update-pip-poetry: &update-pip-poetry |-
   poetry --version
   pip3 install --upgrade pip
-  # 3.6 support was dropped in 1.2.0
-  pip3 install --upgrade poetry==1.1.15
-  # Work around broken urllib3 dependency from poetry 1.1.15
-  pip3 install --upgrade urllib3==1.26.12
+  # Note: When changing poetry version, do multi-file find-replace
+  pip3 install --upgrade poetry~=1.8.3
   # Don't put more poetry commands here, they'll use the old version for some reason
 
 jobs:
@@ -45,7 +43,7 @@ jobs:
           command: coveralls
       - when:
           condition:
-            equal: [ "3.6", << parameters.python-version >> ]
+            equal: [ "3.8", << parameters.python-version >> ]
           steps:
             - store_artifacts:
                 path: dist
@@ -92,7 +90,7 @@ jobs:
   poetry_publish:
     executor:
       name: python/default
-      tag: "3.6"
+      tag: "3.8"
     steps:
       - checkout
       - run:
@@ -150,7 +148,7 @@ workflows:
       - build_install_test:
           matrix:
             parameters:
-              python-version: ["3.6", "3.7", "3.8", "3.9", "3.10"]
+              python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12", "3.13" ]
           filters:  # required since `deploy` has tag filters AND requires `build`
             tags:
               only: /.*/
